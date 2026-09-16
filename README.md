@@ -97,6 +97,25 @@ Communication  serial telemetry and live gain tuning
 
 The position loop is an ordinary **PID** on joint angle, tuned empirically to **Kp = 0.14, Ki = 0.2, Kd = 0**.
 
+`TrajGen` picks which part of the cycle to play from the two contact booleans:
+
+| heel | toe | phase |
+|---|---|---|
+| 1 | 0 | heel strike, moving to flat foot |
+| 1 | 1 | flat foot, moving to heel off |
+| 0 | 1 | heel off, moving to toe off |
+| 0 | 0 | swing |
+
+A latch flag per phase makes each segment play once per step instead of restarting while the contact state holds.
+
+### About the code
+
+It is written in a procedural C style: plain functions, global state, no classes of our own. It compiles as **C++**, because the Arduino core and every library it uses (`PID_v1`, `HX711_ADC`, `AS5600`, `WiFi`) are C++ and are used as objects.
+
+We built it in the **Arduino IDE** throughout, for simplicity and because it is free and open source. The IDE compiles `.ino` as C++ behind the scenes, which is why the original files never had to say so.
+
+[`firmware/ankle_controller_esp32/`](firmware/ankle_controller_esp32) holds the same code with that structure made explicit: shared state in a header, one task per source file, and a PlatformIO config so it builds from the command line. The original sketches are archived untouched in [`firmware/arduino-ide-originals/`](firmware/arduino-ide-originals).
+
 ### Tuning it
 
 We tuned by hand over the serial link, changing one gain at a time and watching the step response in the Arduino plotter. Green is the setpoint, blue is the measured angle, red is the PID output:
@@ -109,14 +128,16 @@ The rest of the sweep is in [`media/results/`](media/results), along with an ACS
 
 `WalkingTraj[101]` holds the reference trajectory: 101 samples covering one gait cycle, derived from published human ankle kinematics.
 
-**Those values are encoder-shaft degrees, not ankle joint degrees.** The firmware converts like this:
+**Those values are raw encoder counts, not degrees.** The loop runs directly on the count, with the joint's zero offset subtracted:
 
 ```c
 raw = revolution * 4096 + raw_angle;   // AS5600 is 12-bit, so 4096 counts/turn
-ang = raw * 0.087;                     // 360/4096 is about 0.0879 deg per count
+raw = raw - ZeroClaib;                 // measured offset of the assembled joint
 ```
 
-The array runs from roughly -74 to +156, which is motor-side travel. The ball screw and foot linkage map it onto the anatomical ankle range, somewhere around 20 degrees of plantarflexion to 10 degrees of dorsiflexion. Read the array as joint angles and the numbers will look impossible. They are not.
+To read the array in degrees, multiply by 360/4096, about 0.0879 degrees per count. The range of roughly -74 to +156 counts is therefore about -6.5 to +13.7 degrees at the encoder, which the ball screw and foot linkage map onto the anatomical ankle range.
+
+Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) and ran the loop on that. The line is still there in the ESP32 source, commented out. If you compare the two builds, that is the difference to watch for: the same trajectory array means counts in one and degrees in the other.
 
 ---
 
@@ -153,7 +174,7 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 **The limitations are real:**
 
 - **A cycle takes about 5 seconds**, against roughly 1 second for a person walking. The drill motor simply could not follow the trajectory any faster. This demonstrates the control concept on a bench. It is not a device anyone could walk on.
-- **Motor authority is capped at 100 of 255 PWM**, about 39 percent duty. We set that ceiling deliberately to keep the improvised drivetrain from tearing itself apart.
+- **Motor authority is capped at 125 of 255 PWM**, about 49 percent duty. We set that ceiling deliberately to keep the improvised drivetrain from tearing itself apart. There is also a hard travel stop: outside -80 to +170 counts the motor is cut regardless of what the loop asks for.
 - **There is no torque or impedance control.** The ankle tracks position and nothing else. A real prosthesis needs compliance that changes through the gait cycle; ours is stiff the whole way through.
 - **It was never tested on an amputee.** All of our testing happened on the bench.
 
@@ -163,9 +184,11 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 
 ```
 firmware/
-  ankle_controller_esp32/   the final ESP32 build, the one that ran
-  loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
-  development_avr/          earlier AVR development sketches
+  ankle_controller_esp32/   the final controller, ported to plain C++ sources
+  arduino-ide-originals/    the 2021 .ino sketches exactly as they were written
+    ankle_controller_esp32/   the final ESP32 build, the one that ran
+    loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
+    development_avr/          earlier AVR development sketches
 docs/
   graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
   individual-contribution-mohamed-tawakol.docx  individual section
