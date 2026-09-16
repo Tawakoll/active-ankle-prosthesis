@@ -3,7 +3,7 @@
  *
  * Sending three floats over serial sets Kp, Ki and Kd at run time, which is
  * how the loop was tuned: change one gain, watch the step response in the
- * Arduino plotter, repeat. Tuned values were Kp 0.14, Ki 0.2, Kd 0.
+ * output plot, repeat. Tuned values were Kp 0.14, Ki 0.2, Kd 0.
  */
 
 #include "config.h"

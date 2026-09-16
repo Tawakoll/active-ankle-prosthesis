@@ -1,10 +1,10 @@
 /*
  * config.h - pins, constants and shared state for the active ankle controller.
  *
- * Ported from the 2021 Arduino IDE sketch with no change in behaviour. The
- * original .ino files are archived under firmware/arduino-ide-originals/.
+ * Ported from the 2021 sketch with no change in behaviour. The
+ * original .ino files are archived under firmware/original-sketches/.
  *
- * The .ino format put every global in one file and let the IDE generate the
+ * The original format put every global in one file and let the IDE generate the
  * function prototypes. Splitting the tasks into separate translation units
  * means the globals are declared extern here and defined once in main.cpp.
  */

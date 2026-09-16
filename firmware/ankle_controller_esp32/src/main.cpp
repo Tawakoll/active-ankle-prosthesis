@@ -1,7 +1,7 @@
 /*
  * main.cpp - global definitions and startup for the active ankle controller.
  *
- * Ported from shimi.ino (2021). Behaviour is unchanged: the same tasks start
+ * Ported from the 2021 sketch. Behaviour is unchanged: the same tasks start
  * in the same order with the same parameters.
  */
 

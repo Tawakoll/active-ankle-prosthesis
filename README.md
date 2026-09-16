@@ -68,11 +68,11 @@ Toe and heel contact read together identify the gait phase, whether that is heel
 
 ### Wiring
 
-The system was designed around an Arduino Uno and then moved to an ESP32 partway through, for the extra I/O, the speed and the WiFi. Both diagrams survive, which makes the migration easy to see:
+The first design was built around an Uno board (ATmega328); we moved to an ESP32 partway through, for the extra I/O, the speed and the WiFi. Both diagrams survive, which makes the migration easy to see:
 
-**First design, Arduino Uno:**
+**First design, Uno board:**
 
-![Arduino Uno wiring diagram](media/hardware/wiring-diagram-arduino-uno.png)
+![First wiring diagram, Uno board](media/hardware/wiring-diagram-uno.png)
 
 **Final design, ESP32:**
 
@@ -110,15 +110,15 @@ A latch flag per phase makes each segment play once per step instead of restarti
 
 ### About the code
 
-It is written in a procedural C style: plain functions, global state, no classes of our own. It compiles as **C++**, because the Arduino core and every library it uses (`PID_v1`, `HX711_ADC`, `AS5600`, `WiFi`) are C++ and are used as objects.
+It is written in a procedural C style: plain functions, global state, no classes of our own. It compiles as **C++**, because the framework core and every library it uses (`PID_v1`, `HX711_ADC`, `AS5600`, `WiFi`) are C++ and are used as objects.
 
 We built it in the **Arduino IDE** throughout, for simplicity and because it is free and open source. The IDE compiles `.ino` as C++ behind the scenes, which is why the original files never had to say so.
 
-[`firmware/ankle_controller_esp32/`](firmware/ankle_controller_esp32) holds the same code with that structure made explicit: shared state in a header, one task per source file, and a PlatformIO config so it builds from the command line. The original sketches are archived untouched in [`firmware/arduino-ide-originals/`](firmware/arduino-ide-originals).
+[`firmware/ankle_controller_esp32/`](firmware/ankle_controller_esp32) holds the same code with that structure made explicit: shared state in a header, one task per source file, and a PlatformIO config so it builds from the command line. The original sketches are archived untouched in [`firmware/original-sketches/`](firmware/original-sketches).
 
 ### Tuning it
 
-We tuned by hand over the serial link, changing one gain at a time and watching the step response in the Arduino plotter. Green is the setpoint, blue is the measured angle, red is the PID output:
+We tuned by hand over the serial link, changing one gain at a time and watching the step response on the serial plot. Green is the setpoint, blue is the measured angle, red is the PID output:
 
 ![PID step response at Kp 0.2 and 0.3](media/results/pid-tuning-kp-0.2-vs-0.3.png)
 
@@ -151,7 +151,7 @@ Prices are from 2021, in Egyptian pounds.
 | Cytron MD10C | H-bridge motor driver | 1 | EGP 380 |
 | HX711 | 24-bit ADC | 5 | EGP 310 |
 | AS5600 | Magnetic encoder, 12-bit | 3 | EGP 270 |
-| MEGA328PAU | Arduino Uno (first design) | 1 | EGP 135 |
+| MEGA328PAU | Uno board, ATmega328 (first design) | 1 | EGP 135 |
 | ACS712 | Current sensor, 30 A | 2 | EGP 125 |
 | RS-550S | DC motor | 1 | EGP 85 |
 
@@ -185,7 +185,7 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 ```
 firmware/
   ankle_controller_esp32/   the final controller, ported to plain C++ sources
-  arduino-ide-originals/    the 2021 .ino sketches exactly as they were written
+  original-sketches/    the 2021 .ino sketches exactly as they were written
     ankle_controller_esp32/   the final ESP32 build, the one that ran
     loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
     development_avr/          earlier AVR development sketches
@@ -201,7 +201,7 @@ REFERENCES.md      cited literature, by DOI
 
 ### One thing worth explaining before you go looking
 
-**The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the Arduino IDE throughout, which is probably where the confusion started.
+**The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the same IDE for both boards, which is probably where the confusion started.
 
 While you are at it, note that `firmware/development_avr/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading. It is an earlier milestone, not the final build.
 

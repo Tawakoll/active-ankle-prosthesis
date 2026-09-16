@@ -1,11 +1,11 @@
 # Ankle controller, ported to C++
 
-This is the 2021 ESP32 controller with the Arduino `.ino` structure unwound
+This is the 2021 ESP32 controller with the `.ino` structure unwound
 into ordinary translation units: shared state declared in `include/config.h`,
 defined once in `src/main.cpp`, one task per source file.
 
 Behaviour is unchanged. The port adds the includes and prototypes that the
-Arduino IDE used to generate, and nothing else.
+IDE used to generate, and nothing else.
 
 | File | Task |
 |---|---|
@@ -21,7 +21,7 @@ Arduino IDE used to generate, and nothing else.
 ## A note on the language
 
 The original was written in a procedural C style: plain functions, global
-state, no user-defined classes. It is compiled as **C++**, because the Arduino
+state, no user-defined classes. It is compiled as **C++**, because the framework
 core and every library it depends on (`PID_v1`, `HX711_ADC`, `AS5600`,
 `WiFi`) are C++ and are used as objects. A C compiler cannot build this
 source, and renaming the files would not change that.
@@ -40,4 +40,4 @@ pio device monitor
 ```
 
 The original sketches are archived, unmodified apart from redacted WiFi
-credentials, under [`../arduino-ide-originals/`](../arduino-ide-originals).
+credentials, under [`../original-sketches/`](../original-sketches).
