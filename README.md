@@ -18,7 +18,7 @@ Most below-knee amputees in the MENA region walk on passive prostheses, which am
 
 Active ankles are sold commercially. Between import duties and regional pricing, they are out of reach for nearly every amputee here.
 
-So we asked a narrow question: could we build one locally, from parts available locally, at a price that made sense locally? The parts list below is the honest answer.
+So we asked a narrow question: could we build one locally, from parts available locally, at a price that made sense locally? Everything in the components list below was bought off the shelf in Cairo, and the motor came out of a cordless drill.
 
 ---
 
@@ -28,9 +28,9 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 ---
 
-## The machine
+## Components
 
-### Actuator
+### Actuation
 
 The drivetrain is the part we are least proud of and learned the most from. We could not source a brushless motor with the torque-to-size ratio we wanted inside our budget, so we took the motor out of a cordless drill.
 
@@ -66,6 +66,14 @@ The drill motor is the root cause of most of the limitations further down this p
 
 Toe and heel contact read together identify the gait phase, whether that is heel strike, flat foot, toe off or swing. That is what tells the controller where the wearer actually is in the cycle, rather than assuming it from a timer.
 
+### Control electronics
+
+| Part | Role |
+|---|---|
+| **ESP32-WROOM-32** | The controller on the assembled ankle. Chosen over the first board for the extra I/O the four load cells needed, the clock speed, and onboard WiFi. |
+| **ATmega328 board** | Ran the motor test bench while the ankle was being machined: motor, H-bridge, encoder and PID tuning. |
+| **Step-down regulator** | 3.3 V logic rail off the 18 V pack (5 V on the bench). |
+
 ### Wiring
 
 The first design was built around an Uno board (ATmega328); we moved to an ESP32 partway through, for the extra I/O, the speed and the WiFi. Both diagrams survive, which makes the migration easy to see:
@@ -82,7 +90,7 @@ The ESP32 build drops the ACS712 from the loop and swaps the 5 V regulator for a
 
 ---
 
-## Control
+## Control system
 
 An **ESP32** runs the controller as concurrent **FreeRTOS** tasks (using `TridentTD_EasyFreeRTOS32`), one task per job:
 
@@ -157,36 +165,6 @@ raw = raw - ZeroClaib;                 // measured offset of the assembled joint
 To read the array in degrees, multiply by 360/4096, about 0.0879 degrees per count. The range of roughly -74 to +156 counts is therefore about -6.5 to +13.7 degrees at the encoder, which the ball screw and foot linkage map onto the anatomical ankle range.
 
 Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) and ran the loop on that. The line is still there in the ESP32 source, commented out. If you compare the two builds, that is the difference to watch for: the same trajectory array means counts in one and degrees in the other.
-
----
-
-## What it cost
-
-### Actuation
-
-| Part | Description | Qty | Price |
-|---|---|---|---|
-| Cytron MD10C | H-bridge motor driver, 10 A | 1 | EGP 380 |
-| RS-550S | Brushed DC motor | 1 | EGP 85 |
-
-### Sensing
-
-| Part | Description | Qty | Price |
-|---|---|---|---|
-| Load cell | 50 kg full-bridge strain gauge | 8 | EGP 4,250 |
-| HX711 | 24-bit ADC | 5 | EGP 310 |
-| AS5600 | Magnetic encoder, 12-bit | 3 | EGP 270 |
-| ACS712 | Current sensor, 30 A | 2 | EGP 125 |
-
-### Control
-
-| Part | Description | Qty | Price |
-|---|---|---|---|
-| MEGA328PAU | ATmega328 board, used on the test bench | 1 | EGP 135 |
-
-Quantities include spares; the assembled ankle uses four load cells, four HX711s and one encoder. Mechanical parts, the ball screw and bearing among them, are costed in [`docs/bill-of-materials.pdf`](docs/bill-of-materials.pdf).
-
-The motor that drives the whole thing cost EGP 85, roughly five US dollars at the time.
 
 ---
 
