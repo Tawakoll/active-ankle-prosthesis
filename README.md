@@ -4,14 +4,18 @@
 
 <table>
 <tr>
-<td width="50%" align="center"><img src="media/hardware/cad-rotation.gif" width="88%"></td>
-<td width="50%" align="center"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
+<td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" width="92%"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-electronics-bay.png" width="100%"></td>
 </tr>
 <tr>
 <td align="center"><i>As designed</i></td>
 <td align="center"><i>As built</i></td>
+<td align="center"><i>Side panel off</i></td>
 </tr>
 </table>
+
+Inside the frame: **1** 18 V drill battery · **2** regulator and driver boards · **3** HX711 load cell amplifiers · **4** ball screw nut · **5** shin housing, ball screw inside · **6** foot plate, load cells underneath
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -70,9 +74,7 @@ This is a recording of the live telemetry, not of the ankle itself. The traces a
 
 The original screen capture is at [`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm). GitHub will not play it inline from a repository path, so it downloads rather than streams, which is why the GIF is here instead.
 
-Below is the assembled prosthesis it was recorded from, with the side panel off. The 18 V drill battery sits at the back of the blue frame, the driver and regulator boards are above it, and the wiring runs down to the ball screw and the foot plate that carries the load cells.
-
-<img src="media/hardware/ankle-electronics-bay.jpg" width="33%">
+The hardware it was recorded from is pictured at the top of this page.
 
 ---
 
