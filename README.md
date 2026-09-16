@@ -289,12 +289,18 @@ Keeping the archived state as the first commit means the history shows what was 
 
 B.Sc. Mechatronics Engineering, AASTMT College of Engineering and Technology, Cairo, 2021.
 
+- **Mohamed Ahmed Mohamed Tawakol** ([@Tawakoll](https://github.com/Tawakoll))
 - Ahmed Mohamed Ahmed Mokhtar
 - Amr Samir Hassanein Mohamed
 - Ibrahim Ayman Ibrahim El-Shimi
-- Mohamed Ahmed Mohamed Tawakol ([@Tawakoll](https://github.com/Tawakoll))
 
 Supervised by Dr. Ahmed Elsawaf and Dr. Moustafa A. Fouz.
+
+### Contributions
+
+Everything in this repository that is software, control or electronics is the work of **Mohamed Tawakol**: the firmware and its FreeRTOS task design, the PID loop and its tuning, the motor test bench, sensor integration and the circuit design.
+
+The project as a whole was a four-person effort. The mechanical design, manufacturing and the written thesis were shared across the team, and the graduation book carries all four names.
 
 Sponsored by the Academy of Scientific Research and Technology (ASRT), Egypt.
 
