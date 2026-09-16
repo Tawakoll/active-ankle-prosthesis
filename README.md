@@ -1,6 +1,6 @@
 # Active Ankle Prosthesis
 
-**A powered ankle built by four engineering students in Cairo, for a fraction of what a commercial one costs.**
+**A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
 
 ![The assembled prosthesis](media/hardware/assembled-ankle.jpeg)
 
@@ -32,47 +32,50 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 ### Actuation
 
-The drivetrain is the part we are least proud of and learned the most from. We could not source a brushless motor with the torque-to-size ratio we wanted inside our budget, so we took the motor out of a cordless drill.
-
-| Part | Spec |
+| Part | Role |
 |---|---|
-| **Motor** | RS-550S brushed DC (HRS-550S-18V), salvaged from a cordless drill |
-| Nominal voltage | 18 V DC (operating range 3–24 V) |
-| No-load speed | 22,000 rpm |
-| No-load current | 0.9 A |
-| Stall current | 62 A |
-| Peak efficiency | 8 A, 103 W output |
-| **Driver** | Cytron MD10C H-bridge, 10 A continuous, PWM + direction pin |
-| **Transmission** | SFU1605 ball screw with nut |
+| RS-550S brushed DC motor | Drives the joint. Taken from a cordless drill: we could not source a brushless motor with the torque-to-size ratio we wanted within the budget. |
+| Cytron MD10C H-bridge | Motor driver, 10 A continuous, driven by a PWM pin and a direction pin. |
+| SFU1605 ball screw and nut | Converts motor rotation into the linear travel that moves the joint. |
+| SKF 6002 bearing | Carries the ankle joint. |
+| 18 V Li-ion pack, 1200 mAh | Supplies the motor, and the logic rail through a step-down regulator. |
+
+Motor and ball screw figures, from the graduation book:
+
+| Property | Value |
+|---|---|
+| Motor nominal voltage | 18 V DC (operating range 3-24 V) |
+| Motor no-load speed | 22,000 rpm |
+| Motor no-load current | 0.9 A |
+| Motor stall current | 62 A |
+| Motor peak efficiency | 8 A, 103 W output |
 | Screw diameter | 16 mm (13 mm root) |
-| Lead | 5 mm per revolution |
-| Length | 400 mm |
-| Material | Steel alloy, 147 MPa permissible strength |
-| **Joint bearing** | SKF 6002 |
-| **Power** | 18 V Li-ion pack, 1200 mAh, with a step-down regulator for the logic rail |
+| Screw lead | 5 mm per revolution |
+| Screw length | 400 mm |
+| Screw material | Steel alloy, 147 MPa permissible strength |
 
-We sized the screw against an approximate 1500 N design load with a safety factor, and checked it for buckling as a fixed-supported column over a 130 mm span. The full calculation, along with the Inventor FEA (Von Mises stress, displacement, contact pressure), is worked through in detail in the graduation book.
+The screw was sized against an approximate 1500 N design load and checked for buckling as a fixed-supported column over a 130 mm span. That calculation and the Inventor FEA (Von Mises stress, displacement, contact pressure) are worked through in the graduation book.
 
-The drill motor is the root cause of most of the limitations further down this page. Worth knowing that going in.
+The drill motor is the root of most of the limitations further down this page.
 
 ### Sensing
 
-| Sensor | Qty | What it does |
-|---|---|---|
-| **AS5600** magnetic rotary encoder (I²C, 12-bit) | 1 | Joint position. Absolute within one turn; firmware counts revolutions for multi-turn travel. |
-| **Load cells**, 50 kg full-bridge strain gauge | 4 | Ground contact. Two under the toe, two under the heel. |
-| **HX711** 24-bit ADC | 4 | One amplifier per load cell. |
-| **ACS712** current sensor, 30 A | 1 | Motor current, for characterisation and keeping the motor inside safe limits. |
+| Part | Role |
+|---|---|
+| AS5600 magnetic rotary encoder (I²C, 12-bit) | Joint position. Absolute within one turn; firmware counts revolutions for multi-turn travel. |
+| 50 kg full-bridge load cells | Ground contact. Four of them: two under the toe, two under the heel. |
+| HX711 24-bit ADC | One amplifier per load cell, so four. |
+| ACS712 current sensor, 30 A | Motor current. Used in the first design and on the test bench; it is not in the final ESP32 wiring or firmware. |
 
-Toe and heel contact read together identify the gait phase, whether that is heel strike, flat foot, toe off or swing. That is what tells the controller where the wearer actually is in the cycle, rather than assuming it from a timer.
+Toe and heel contact read together identify the gait phase, whether that is heel strike, flat foot, toe off or swing. That is what tells the controller where the wearer is in the cycle, rather than assuming it from a timer.
 
 ### Control electronics
 
 | Part | Role |
 |---|---|
-| **ESP32-WROOM-32** | The controller on the assembled ankle. Chosen over the first board for the extra I/O the four load cells needed, the clock speed, and onboard WiFi. |
-| **ATmega328 board** | Ran the motor test bench while the ankle was being machined: motor, H-bridge, encoder and PID tuning. |
-| **Step-down regulator** | 3.3 V logic rail off the 18 V pack (5 V on the bench). |
+| ESP32-WROOM-32 | The controller on the assembled ankle. Chosen over the first board for the extra I/O the four load cells needed, the clock speed, and onboard WiFi. |
+| ATmega328 board | Ran the motor test bench while the ankle was being machined: motor, H-bridge, encoder and PID tuning. |
+| Step-down regulator | Logic rail off the 18 V pack: 3.3 V for the ESP32, 5 V in the first design. |
 
 ### Wiring
 
@@ -96,7 +99,7 @@ An **ESP32** runs the controller as concurrent **FreeRTOS** tasks (using `Triden
 
 ```
 TrajGen        steps through the reference trajectory, advancing on gait phase
-read_ANGLE     reads the AS5600, counts revolutions, converts to degrees
+read_ANGLE     reads the AS5600, counts revolutions, applies the zero offset
 pid            PID position loop; drives motor PWM and direction
 toe_cells      2x HX711, toe contact, threshold 400
 heel_cells     2x HX711, heel contact, threshold 400
