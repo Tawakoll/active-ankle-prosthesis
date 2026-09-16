@@ -8,7 +8,7 @@
 
 A DC motor turns a ball screw, which drives the ankle joint. Load cells in the foot tell the controller which part of the gait cycle the wearer is in, and the ankle follows a reference angle trajectory to match.
 
-The project won a sponsorship scholarship from the **Academy of Scientific Research and Technology (ASRT)**, Egypt, which paid for the build.
+The project won a sponsorship scholarship from the **Academy of Scientific Research and Technology (ASRT)**, Egypt.
 
 ---
 
@@ -195,7 +195,7 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 ```
 firmware/
   ankle_controller_esp32/   the final controller, ported to plain C++ sources
-  original-sketches/    the 2021 .ino sketches exactly as they were written
+  original-sketches/        the 2021 .ino sketches exactly as they were written
     ankle_controller_esp32/   the final ESP32 build, the one that ran
     loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
     motor-test-bench/         AVR bench: motor, H-bridge, encoder, PID tuning
@@ -217,7 +217,9 @@ While you are at it, note that `firmware/original-sketches/motor-test-bench/FINA
 
 ### About the commit history
 
-The first commit holds the 2021 files exactly as they were archived. The second re-enables the gait-phase tasks in `ankle_controller_esp32.ino`, which had been commented out during a test session and left that way when the file was saved. Keeping both states means the archive stays honest about what was found and what was changed.
+The first commit holds the 2021 files exactly as they were archived. Two later commits change behaviour: one re-enables the load cell tasks in `setup()`, and the port commit restores the gait-phase state machine inside `TrajGen`. Both had been commented out in the saved file, leaving a build where the load cells ran without affecting motion.
+
+Keeping the archived state as the first commit means the history shows what was found as well as what was changed. The WiFi credentials are the one exception: they were redacted throughout, including in history.
 
 ---
 
