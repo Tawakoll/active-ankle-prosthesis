@@ -4,20 +4,14 @@
 
 <table>
 <tr>
-<td width="50%"><img src="media/hardware/cad-assembly-annotated.png" width="100%"></td>
-<td width="50%"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
+<td width="50%" align="center"><img src="media/hardware/cad-rotation.gif" width="88%"></td>
+<td width="50%" align="center"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
 </tr>
 <tr>
 <td align="center"><i>As designed</i></td>
 <td align="center"><i>As built</i></td>
 </tr>
 </table>
-
-| | | | |
-|---|---|---|---|
-| **1** Motor | **4** Ball screw nut | **7** Bearing | **10** Heel |
-| **2** Motor holder | **5** Lower link | **8** Foot shaft | **11** Spring sheet |
-| **3** Support | **6** Lower link shaft | **9** Fore foot | |
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -112,7 +106,13 @@ The screw was sized against an approximate 1500 N design load and checked for bu
 
 The drill motor is the root of most of the limitations further down this page.
 
-<img src="media/hardware/cad-rotation.gif" width="32%">
+<img src="media/hardware/cad-assembly-annotated.png" width="34%">
+
+| | | | |
+|---|---|---|---|
+| **1** Motor | **4** Ball screw nut | **7** Bearing | **10** Heel |
+| **2** Motor holder | **5** Lower link | **8** Foot shaft | **11** Spring sheet |
+| **3** Support | **6** Lower link shaft | **9** Fore foot | |
 
 Opened up, the drivetrain and the foot look like this:
 
