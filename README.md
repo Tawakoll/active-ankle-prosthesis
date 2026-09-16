@@ -70,9 +70,9 @@ This is a recording of the live telemetry, not of the ankle itself. The traces a
 
 The original screen capture is at [`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm). GitHub will not play it inline from a repository path, so it downloads rather than streams, which is why the GIF is here instead.
 
-Below is the assembled prosthesis it was recorded from. The blue plate carries the electronics, the ball screw runs down the centre of the shin, and the foot plate carries the load cells.
+Below is the assembled prosthesis it was recorded from, with the side panel off. The 18 V drill battery sits at the back of the blue frame, the driver and regulator boards are above it, and the wiring runs down to the ball screw and the foot plate that carries the load cells.
 
-<img src="media/hardware/assembled-ankle.jpeg" width="35%">
+<img src="media/hardware/ankle-electronics-bay.jpg" width="33%">
 
 ---
 
