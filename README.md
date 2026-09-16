@@ -2,7 +2,9 @@
 
 **A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
 
-![The assembled prosthesis](media/hardware/assembled-ankle.jpeg)
+![The assembled prosthesis on the bench](media/hardware/assembled-ankle.jpeg)
+
+*The blue plate carries the electronics. The ball screw runs down the centre of the shin, and the foot plate below it carries the load cells.*
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -22,9 +24,40 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 ---
 
+## How it works
+
+The ankle is a closed position loop with an outer layer that decides *what position to ask for*.
+
+```mermaid
+flowchart LR
+    TOE["2x load cell<br/>(toe)"] --> HXA[HX711]
+    HEEL["2x load cell<br/>(heel)"] --> HXB[HX711]
+    HXA --> GP{"gait phase<br/>toe / heel contact"}
+    HXB --> GP
+    GP --> TG["TrajGen<br/>picks trajectory segment"]
+    TG -->|"setpoint"| PID["PID loop"]
+    PID -->|"PWM + direction"| DRV["Cytron MD10C"]
+    DRV --> MOT["RS-550S motor"]
+    MOT --> SCREW["SFU1605 ball screw"]
+    SCREW --> JOINT["ankle joint"]
+    JOINT --> ENC["AS5600 encoder"]
+    ENC -->|"measured position"| PID
+```
+
+Reading it as a cycle:
+
+1. **Where is the wearer in their step?** Four load cells under the foot report toe and heel contact. The combination identifies the gait phase.
+2. **What angle should the ankle be at?** `TrajGen` plays the segment of the reference trajectory that belongs to that phase, one sample at a time. Each sample is the setpoint.
+3. **Get there.** The PID loop compares the setpoint against the encoder and drives the motor through the H-bridge. The ball screw turns rotation into the linear travel that moves the joint.
+4. **Measure and repeat.** The encoder closes the loop.
+
+Every one of those steps is its own FreeRTOS task, so sensing, planning and control run concurrently rather than in one polling loop.
+
+---
+
 ## The demo
 
-[**`media/demo/gait-cycle-demo.webm`**](media/demo/gait-cycle-demo.webm) shows the ankle working through one complete gait cycle.
+[**`media/demo/gait-cycle-demo.webm`**](media/demo/gait-cycle-demo.webm) shows the ankle working through one complete gait cycle. GitHub will not play it inline from a repository path, so it downloads rather than streams.
 
 ---
 
@@ -131,7 +164,10 @@ We built it in the **Arduino IDE**, chosen because it is free, open source and g
 
 None of the control work waited for the mechanical build. While the ankle was still being machined, we put a bench together with just the motor, the H-bridge and the encoder, and developed against that.
 
-[`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench) is that work, and the sketches read as the sequence we actually went through:
+[`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench) is that work, and the sketches read as the sequence we actually went through.
+
+<details>
+<summary><b>The bring-up sequence, sketch by sketch</b></summary>
 
 | Stage | Sketches |
 |---|---|
@@ -144,15 +180,41 @@ None of the control work waited for the mechanical build. While the ankle was st
 | Position control, then position plus current | `pid_position_control_code`, `pid_position_control_current_code` |
 | Full bench controller with the gait trajectory | `FINAL_PID_CODE_WITH_RTOS` |
 
+</details>
+
 By the time the assembled ankle existed, the loop was already tuned and the gains were known. The move to the ESP32 and the load cell array came after that, on a controller we already trusted.
 
 ### Tuning it
 
-We tuned by hand over the serial link, changing one gain at a time and watching the step response on the serial plot. Green is the setpoint, blue is the measured angle, red is the PID output:
+We tuned by hand over the serial link. The setpoint was a square wave between 0 and 150 counts, and we changed one gain at a time and watched the response. Green is the setpoint, blue the measured position, red the PID output.
 
-![PID step response at Kp 0.2 and 0.3](media/results/pid-tuning-kp-0.2-vs-0.3.png)
+![Step response at Kp 0.2 and 0.3](media/results/pid-tuning-kp-0.2-vs-0.3.png)
 
-The rest of the sweep is in [`media/results/`](media/results), along with an ACS712 current trace from the motor.
+<details>
+<summary><b>The rest of the sweep</b></summary>
+
+**Kp = 0.1.** The response settles below the setpoint and never closes the gap:
+
+![Step response at Kp 0.1](media/results/pid-tuning-kp-0.1.png)
+
+**Kp = 0.1 against 0.2:**
+
+![Step response at Kp 0.1 and 0.2](media/results/pid-tuning-kp-0.1-vs-0.2.png)
+
+Raising Kp closes the steady-state gap and brings overshoot with it. The integral term, settling at Ki = 0.2, is what removed the remaining offset.
+
+</details>
+
+<details>
+<summary><b>Current sensing on the bench</b></summary>
+
+ACS712 output during bring-up, reading roughly 73.94 mA at rest against a 2503 mV reference, with a step to 147.88 mA under load:
+
+![ACS712 current readings](media/results/current-sensor-readings.png)
+
+This was used to characterise the motor and choose the duty ceiling. It did not make it into the final ESP32 build.
+
+</details>
 
 ### About the trajectory units
 
