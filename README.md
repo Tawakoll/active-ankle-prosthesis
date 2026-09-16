@@ -2,9 +2,13 @@
 
 **A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
 
-![The assembled prosthesis on the bench](media/hardware/assembled-ankle.jpeg)
+<img src="media/hardware/cad-assembly-annotated.png" width="38%">
 
-*The blue plate carries the electronics. The ball screw runs down the centre of the shin, and the foot plate below it carries the load cells.*
+| | | | |
+|---|---|---|---|
+| **1** Motor | **4** Ball screw nut | **7** Bearing | **10** Heel |
+| **2** Motor holder | **5** Lower link | **8** Foot shaft | **11** Spring sheet |
+| **3** Support | **6** Lower link shaft | **9** Fore foot | |
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -55,9 +59,17 @@ Every one of those steps is its own FreeRTOS task, so sensing, planning and cont
 
 ---
 
-## The demo
+## The ankle tracking a gait cycle
 
-[**`media/demo/gait-cycle-demo.webm`**](media/demo/gait-cycle-demo.webm) shows the ankle working through one complete gait cycle. GitHub will not play it inline from a repository path, so it downloads rather than streams.
+This is a recording of the live telemetry, not of the ankle itself. The traces are joint position together with `heel_state` and `toe_state`, so it shows the controller working through a full cycle with contact detection running.
+
+<img src="media/demo/gait-cycle-trace.gif" width="50%">
+
+The original screen capture is at [`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm). GitHub will not play it inline from a repository path, so it downloads rather than streams, which is why the GIF is here instead.
+
+Below is the assembled prosthesis it was recorded from. The blue plate carries the electronics, the ball screw runs down the centre of the shin, and the foot plate carries the load cells.
+
+<img src="media/hardware/assembled-ankle.jpeg" width="35%">
 
 ---
 
@@ -116,11 +128,11 @@ The first design was built around an Uno board (ATmega328); we moved to an ESP32
 
 **First design, Uno board:**
 
-![First wiring diagram, Uno board](media/hardware/wiring-diagram-uno.png)
+<img src="media/hardware/wiring-diagram-uno.png" width="50%">
 
 **Final design, ESP32:**
 
-![ESP32 wiring diagram](media/hardware/wiring-diagram-esp32.png)
+<img src="media/hardware/wiring-diagram-esp32.png" width="50%">
 
 The ESP32 build drops the ACS712 from the loop and swaps the 5 V regulator for a 3.3 V one. Everything else carries over.
 
@@ -164,6 +176,10 @@ We built it in the **Arduino IDE**, chosen because it is free, open source and g
 
 None of the control work waited for the mechanical build. While the ankle was still being machined, we put a bench together with just the motor, the H-bridge and the encoder, and developed against that.
 
+<img src="media/hardware/motor-test-bench.png" width="50%">
+
+**1** RS-550S motor · **2** ball screw and coupling · **3** Cytron MD10C driver · **4** ATmega328 board · **5** 18 V drill battery
+
 [`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench) is that work, and the sketches read as the sequence we actually went through.
 
 <details>
@@ -188,18 +204,18 @@ By the time the assembled ankle existed, the loop was already tuned and the gain
 
 We tuned by hand over the serial link. The setpoint was a square wave between 0 and 150 counts, and we changed one gain at a time and watched the response. Green is the setpoint, blue the measured position, red the PID output.
 
-![Step response at Kp 0.2 and 0.3](media/results/pid-tuning-kp-0.2-vs-0.3.png)
+<img src="media/results/pid-tuning-kp-0.2-vs-0.3.png" width="50%">
 
 <details>
 <summary><b>The rest of the sweep</b></summary>
 
 **Kp = 0.1.** The response settles below the setpoint and never closes the gap:
 
-![Step response at Kp 0.1](media/results/pid-tuning-kp-0.1.png)
+<img src="media/results/pid-tuning-kp-0.1.png" width="50%">
 
 **Kp = 0.1 against 0.2:**
 
-![Step response at Kp 0.1 and 0.2](media/results/pid-tuning-kp-0.1-vs-0.2.png)
+<img src="media/results/pid-tuning-kp-0.1-vs-0.2.png" width="50%">
 
 Raising Kp closes the steady-state gap and brings overshoot with it. The integral term, settling at Ki = 0.2, is what removed the remaining offset.
 
@@ -210,7 +226,7 @@ Raising Kp closes the steady-state gap and brings overshoot with it. The integra
 
 ACS712 output during bring-up, reading roughly 73.94 mA at rest against a 2503 mV reference, with a step to 147.88 mA under load:
 
-![ACS712 current readings](media/results/current-sensor-readings.png)
+<img src="media/results/current-sensor-readings.png" width="50%">
 
 This was used to characterise the motor and choose the duty ceiling. It did not make it into the final ESP32 build.
 
