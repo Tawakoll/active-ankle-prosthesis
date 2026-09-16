@@ -163,9 +163,9 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 
 ```
 firmware/
-  esp32-final/     shimi/       the final ESP32 build, the one that ran
-  esp32-bench/     trial_code/  load-cell isolation test: sensors on, motor loop off
-  arduino-avr/                  earlier AVR development sketches
+  ankle_controller_esp32/   the final ESP32 build, the one that ran
+  loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
+  development_avr/          earlier AVR development sketches
 docs/
   graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
   individual-contribution-mohamed-tawakol.docx  individual section
@@ -176,17 +176,15 @@ media/
 REFERENCES.md      cited literature, by DOI
 ```
 
-### Two things worth explaining before you go looking
-
-**Why the folder is called `shimi`.** It is named after Ibrahim El-Shimi, one of the team, not after any part of the machine. That folder holds the final firmware.
+### One thing worth explaining before you go looking
 
 **The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the Arduino IDE throughout, which is probably where the confusion started.
 
-While you are at it, note that `firmware/arduino-avr/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading. It is an earlier milestone, not the final build.
+While you are at it, note that `firmware/development_avr/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading. It is an earlier milestone, not the final build.
 
 ### About the commit history
 
-The first commit holds the 2021 files exactly as they were archived. The second re-enables the gait-phase tasks in `shimi.ino`, which had been commented out during a test session and left that way when the file was saved. Keeping both states means the archive stays honest about what was found and what was changed.
+The first commit holds the 2021 files exactly as they were archived. The second re-enables the gait-phase tasks in `ankle_controller_esp32.ino`, which had been commented out during a test session and left that way when the file was saved. Keeping both states means the archive stays honest about what was found and what was changed.
 
 ---
 
