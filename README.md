@@ -18,7 +18,7 @@ Most below-knee amputees in the MENA region walk on passive prostheses, which am
 
 Active ankles are sold commercially. Between import duties and regional pricing, they are out of reach for nearly every amputee here.
 
-So we asked a narrow question: could we build one locally, from parts available locally, at a price that made sense locally? The bill of materials below is the honest answer.
+So we asked a narrow question: could we build one locally, from parts available locally, at a price that made sense locally? The parts list below is the honest answer.
 
 ---
 
@@ -112,9 +112,28 @@ A latch flag per phase makes each segment play once per step instead of restarti
 
 It is written in a procedural C style: plain functions, global state, no classes of our own. It compiles as **C++**, because the framework core and every library it uses (`PID_v1`, `HX711_ADC`, `AS5600`, `WiFi`) are C++ and are used as objects.
 
-We built it in the **Arduino IDE** throughout, for simplicity and because it is free and open source. The IDE compiles `.ino` as C++ behind the scenes, which is why the original files never had to say so.
+We built it in the **Arduino IDE**, chosen because it is free, open source and got out of the way while we were bringing hardware up. It compiles `.ino` as C++ behind the scenes, which is why the original files never had to say so.
 
-[`firmware/ankle_controller_esp32/`](firmware/ankle_controller_esp32) holds the same code with that structure made explicit: shared state in a header, one task per source file, and a PlatformIO config so it builds from the command line. The original sketches are archived untouched in [`firmware/original-sketches/`](firmware/original-sketches).
+[`firmware/ankle_controller_esp32/`](firmware/ankle_controller_esp32) holds the same code with its structure made explicit: shared state in a header, one task per source file, and a PlatformIO config so it builds from the command line. The original sketches are archived untouched in [`firmware/original-sketches/`](firmware/original-sketches).
+
+### The test bench came first
+
+None of the control work waited for the mechanical build. While the ankle was still being machined, we put a bench together with just the motor, the H-bridge and the encoder, and developed against that.
+
+[`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench) is that work, and the sketches read as the sequence we actually went through:
+
+| Stage | Sketches |
+|---|---|
+| Encoder alone, magnet detection and angle read | `encoder_angle` |
+| Encoder driving the motor through the H-bridge | `read_angle_with_motor` |
+| Current sensing, standalone then under load | `CURRENT_SENSOR`, `CURRENT_SENSOR_motor` |
+| Load cell characterisation | `Read_1x_load_cell_renewed` |
+| Moving to an RTOS, one concern per task | `FreeRTOS_sketch`, `testing_encoder_with_rtos`, `target_angle_and_printing` |
+| PID under the scheduler | `rtos_with_pid`, `rtos_with_pid_library` |
+| Position control, then position plus current | `pid_position_control_code`, `pid_position_control_current_code` |
+| Full bench controller with the gait trajectory | `FINAL_PID_CODE_WITH_RTOS` |
+
+By the time the assembled ankle existed, the loop was already tuned and the gains were known. The move to the ESP32 and the load cell array came after that, on a controller we already trusted.
 
 ### Tuning it
 
@@ -143,21 +162,31 @@ Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) a
 
 ## What it cost
 
-Prices are from 2021, in Egyptian pounds.
+### Actuation
+
+| Part | Description | Qty | Price |
+|---|---|---|---|
+| Cytron MD10C | H-bridge motor driver, 10 A | 1 | EGP 380 |
+| RS-550S | Brushed DC motor | 1 | EGP 85 |
+
+### Sensing
 
 | Part | Description | Qty | Price |
 |---|---|---|---|
 | Load cell | 50 kg full-bridge strain gauge | 8 | EGP 4,250 |
-| Cytron MD10C | H-bridge motor driver | 1 | EGP 380 |
 | HX711 | 24-bit ADC | 5 | EGP 310 |
 | AS5600 | Magnetic encoder, 12-bit | 3 | EGP 270 |
-| MEGA328PAU | Uno board, ATmega328 (first design) | 1 | EGP 135 |
 | ACS712 | Current sensor, 30 A | 2 | EGP 125 |
-| RS-550S | DC motor | 1 | EGP 85 |
 
-Quantities include spares; the assembled ankle uses four load cells, four HX711s and one encoder. Full bill of materials in [`docs/bill-of-materials.pdf`](docs/bill-of-materials.pdf).
+### Control
 
-For context, the motor that drives the whole thing cost EGP 85, roughly five US dollars at the time.
+| Part | Description | Qty | Price |
+|---|---|---|---|
+| MEGA328PAU | ATmega328 board, used on the test bench | 1 | EGP 135 |
+
+Quantities include spares; the assembled ankle uses four load cells, four HX711s and one encoder. Mechanical parts, the ball screw and bearing among them, are costed in [`docs/bill-of-materials.pdf`](docs/bill-of-materials.pdf).
+
+The motor that drives the whole thing cost EGP 85, roughly five US dollars at the time.
 
 ---
 
@@ -188,7 +217,7 @@ firmware/
   original-sketches/    the 2021 .ino sketches exactly as they were written
     ankle_controller_esp32/   the final ESP32 build, the one that ran
     loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
-    development_avr/          earlier AVR development sketches
+    motor-test-bench/         AVR bench: motor, H-bridge, encoder, PID tuning
 docs/
   graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
   individual-contribution-mohamed-tawakol.docx  individual section
@@ -203,7 +232,7 @@ REFERENCES.md      cited literature, by DOI
 
 **The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the same IDE for both boards, which is probably where the confusion started.
 
-While you are at it, note that `firmware/development_avr/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading. It is an earlier milestone, not the final build.
+While you are at it, note that `firmware/original-sketches/motor-test-bench/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading: it is the final *bench* controller, the last milestone before the ESP32 build, not the final firmware.
 
 ### About the commit history
 
