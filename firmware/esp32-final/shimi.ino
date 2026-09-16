@@ -92,8 +92,8 @@ void setup() {
   task1.start( TrajGen );
   task3.start( read_ANGLE );
   task2.start( Communication );
-  //task6.start( toe_cells );
-  //task7.start(heel_cells);
+  task6.start( toe_cells );
+  task7.start(heel_cells);
   //task8.start(wifi_communication);
   
   ledcSetup(LEDC_CHANNEL_0, LEDC_BASE_FREQ, LEDC_TIMER_13_BIT);
