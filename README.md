@@ -1,24 +1,24 @@
 # Active Ankle Prosthesis
 
-> **Archived academic project — 2021.** This is the B.Sc. graduation project of four Mechatronics Engineering students at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is preserved here as a record of the work. It is not maintained, and it is not a medical device.
+> **Archived academic project, 2021.** This was the B.Sc. graduation project of four Mechatronics Engineering students at the Arab Academy for Science, Technology & Maritime Transport (AASTMT) in Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
-A powered (active) transtibial ankle prosthesis: a ball-screw-driven ankle joint under closed-loop position control, with foot-mounted load cells detecting where in the gait cycle the wearer is, and the ankle tracking a reference ankle-angle trajectory in response.
+A powered transtibial ankle prosthesis. The joint is driven by a ball screw under closed-loop position control. Load cells in the foot tell the controller which part of the gait cycle the wearer is in, and the ankle follows a reference angle trajectory accordingly.
 
-**This project won a sponsorship scholarship from the Academy of Scientific Research and Technology (ASRT), Egypt**, awarded to the team to fund the build.
+The team won a sponsorship scholarship from the Academy of Scientific Research and Technology (ASRT) in Egypt, which funded the build.
 
 ---
 
-## Why
+## Why we built it
 
-Most below-knee amputees in the MENA region walk on *passive* prostheses — a spring and a hinge. A passive ankle returns some energy but generates none, so stairs, inclines and long walks cost the wearer significantly more effort, and the asymmetric gait causes secondary problems over time. Commercial active ankles exist, but import duties and regional pricing put them out of reach for most amputees here.
+Most below-knee amputees in the MENA region walk on passive prostheses, which amount to a spring and a hinge. A passive ankle gives some energy back but generates none of its own. Stairs, slopes and long walks therefore cost the wearer a lot more effort, and years of asymmetric gait bring their own problems. Active ankles are sold commercially, but between import duties and regional pricing they are out of reach for most amputees here.
 
-The goal of this project was a powered ankle that could plausibly be built and afforded locally.
+We wanted to find out whether a powered ankle could be built locally, for a price that made sense locally.
 
 ---
 
 ## Demo
 
-[`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm) — the ankle tracking one full gait cycle.
+[`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm) shows the ankle following one full gait cycle.
 
 | | |
 |---|---|
@@ -30,116 +30,119 @@ The goal of this project was a powered ankle that could plausibly be built and a
 
 ### Mechanical
 
-A DC motor drives an **SFU1605 ball screw**, which converts rotation into linear travel and drives the ankle joint through the foot linkage. An **SKF 6002** bearing carries the joint. The structural parts were checked in Autodesk Inventor (Von Mises stress, displacement, contact pressure) before manufacture — the analysis is in the graduation book.
+A DC motor turns an **SFU1605 ball screw**. The screw turns that rotation into linear travel, which drives the ankle joint through the foot linkage. An **SKF 6002** bearing carries the joint.
 
-The motor is a **repurposed cordless drill motor**. A brushless motor with the right torque-to-size ratio was not obtainable within the project's budget and timeline, so the team improvised. This is the single biggest constraint on the system's performance, and most of the limitations below follow from it.
+We checked the structural parts in Autodesk Inventor before manufacturing them: Von Mises stress, displacement and contact pressure. The full analysis, with figures and result summaries, is in the graduation book.
+
+The motor is a **cordless drill motor we repurposed**. A brushless motor with the torque-to-size ratio we wanted was not something we could get within the budget or the timeline, so we improvised. That decision shapes almost everything in the limitations section below.
 
 ### Sensing
 
-| Sensor | Purpose |
+| Sensor | What it does |
 |---|---|
-| **AS5600** magnetic rotary encoder (I²C) | Joint position — absolute within a turn, with software revolution counting for multi-turn travel |
-| **4 × load cells** via HX711 amplifiers | Ground contact: 2 under the toe, 2 under the heel |
-| **Current sensor** | Motor current, used for characterisation and to keep the motor inside safe limits |
+| **AS5600** magnetic rotary encoder (I²C) | Joint position. Absolute within one turn; firmware counts revolutions for multi-turn travel. |
+| **4 load cells** on HX711 amplifiers | Ground contact. Two under the toe, two under the heel. |
+| **Current sensor** | Motor current, for characterisation and for keeping the motor inside safe limits. |
 
-Toe and heel contact together identify the gait phase — heel strike, flat foot, toe off, swing — which is what tells the controller where in the cycle the wearer actually is.
+Toe and heel contact taken together identify the gait phase, whether that is heel strike, flat foot, toe off or swing. That is what tells the controller where the wearer actually is in the cycle.
 
 ### Control
 
-An **ESP32** runs the controller as concurrent **FreeRTOS** tasks (via `TridentTD_EasyFreeRTOS32`), one per concern:
+An **ESP32** runs the controller as concurrent **FreeRTOS** tasks (using `TridentTD_EasyFreeRTOS32`), one task per job:
 
 ```
-TrajGen      → steps through the reference trajectory, advancing on gait phase
-read_ANGLE   → reads the AS5600, accumulates revolutions, converts to degrees
-pid          → PID position loop, drives motor PWM + direction
-toe_cells    → 2× HX711, toe contact, threshold = 400
-heel_cells   → 2× HX711, heel contact, threshold = 400
-Communication→ serial telemetry and live gain tuning
+TrajGen       steps through the reference trajectory, advancing on gait phase
+read_ANGLE    reads the AS5600, counts revolutions, converts to degrees
+pid           PID position loop; drives motor PWM and direction
+toe_cells     2x HX711, toe contact, threshold 400
+heel_cells    2x HX711, heel contact, threshold 400
+Communication serial telemetry and live gain tuning
 ```
 
-The position loop is a straightforward **PID** on joint angle, tuned empirically to **Kp = 0.14, Ki = 0.2, Kd = 0** (see [`media/results/`](media/results) for the step responses at each gain). Motor output is PWM with a separate direction pin.
+The position loop is an ordinary **PID** on joint angle. We tuned it empirically to **Kp = 0.14, Ki = 0.2, Kd = 0**; the step responses at each gain are in [`media/results/`](media/results). Motor output is PWM on one pin with direction on another.
 
-#### A note on the trajectory units
+#### About the trajectory units
 
-`WalkingTraj[101]` holds the reference trajectory — 101 samples spanning one gait cycle, derived from published human ankle kinematics.
+`WalkingTraj[101]` holds the reference trajectory: 101 samples covering one gait cycle, derived from published human ankle kinematics.
 
-**The values are in encoder-shaft degrees, not ankle joint degrees.** The conversion in firmware is:
+**Those values are encoder-shaft degrees, not ankle joint degrees.** The firmware converts like this:
 
 ```c
-raw = revolution * 4096 + raw_angle;   // AS5600 is 12-bit → 4096 counts/turn
-ang = raw * 0.087;                     // 360/4096 ≈ 0.0879 deg/count
+raw = revolution * 4096 + raw_angle;   // AS5600 is 12-bit, so 4096 counts/turn
+ang = raw * 0.087;                     // 360/4096 is about 0.0879 deg per count
 ```
 
-So the range of roughly −74 to +156 is motor-side travel, which maps to the anatomical ankle range (about −20° plantarflexion to +10° dorsiflexion) through the ball screw and foot linkage. If you read the array expecting joint angles, the numbers will look impossible — they aren't.
+The array runs from roughly -74 to +156, which is motor-side travel. The ball screw and foot linkage map it onto the anatomical ankle range, somewhere around 20 degrees of plantarflexion to 10 degrees of dorsiflexion. Read the array as joint angles and the numbers will look impossible. They are not.
 
 ---
 
-## What worked, and what didn't
+## What worked and what didn't
 
-Stated plainly, because a project archive that oversells itself is worthless to anyone reading it.
+Setting this out plainly, since an archive that oversells itself is no use to anyone who reads it.
 
-**Worked:**
-- Closed-loop position control of the ankle joint, tracking the reference trajectory
-- Gait-phase detection from toe and heel load cells, demonstrated on hardware
-- Full mechanical design, FEA, and a manufactured working prototype
+We got working:
 
-**Limitations:**
-- **Cycle time ≈ 5 s**, against roughly 1 s for real human walking. The drill motor could not track the trajectory any faster. This is a bench demonstration of the control concept, not a walkable device.
-- **Motor authority capped at ±100 of 255 PWM** (≈39% duty) — a deliberate ceiling to protect the improvised drivetrain from mechanical failure.
-- **No torque or impedance control.** The ankle tracks position only. A real prosthesis needs compliance that varies through the gait cycle; this one is stiff throughout.
-- **Never tested on an amputee.** All testing was on the bench.
+- Closed-loop position control of the ankle joint, following the reference trajectory
+- Gait-phase detection from the toe and heel load cells, demonstrated on hardware
+- A complete mechanical design with FEA behind it, manufactured into a working prototype
+
+The limitations are real:
+
+- **A cycle takes about 5 seconds**, against roughly 1 second for a person walking. The drill motor simply could not follow the trajectory any faster. This demonstrates the control concept on a bench. It is not a device anyone could walk on.
+- **Motor authority is capped at 100 of 255 PWM**, about 39 percent duty. We set that ceiling deliberately to keep the improvised drivetrain from tearing itself apart.
+- **There is no torque or impedance control.** The ankle tracks position and nothing else. A real prosthesis needs compliance that changes through the gait cycle; ours is stiff the whole way through.
+- **It was never tested on an amputee.** All of our testing happened on the bench.
 
 ---
 
-## Repository layout
+## What is in this repository
 
 ```
 firmware/
-  esp32-final/     shimi/     — the final ESP32 build (the one that ran)
-  esp32-bench/     trial_code/— load-cell isolation test: sensors on, motor loop off
-  arduino-avr/                — earlier AVR-based development sketches
+  esp32-final/     shimi/       the final ESP32 build, the one that ran
+  esp32-bench/     trial_code/  load-cell isolation test: sensors on, motor loop off
+  arduino-avr/                  earlier AVR development sketches
 docs/
-  graduation-book-2021-07-03.pdf              — full group thesis (111 pp.)
-  individual-contribution-mohamed-tawakol.docx— individual section
+  graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
+  individual-contribution-mohamed-tawakol.docx  individual section
   project-proposal-2020.pdf
   bill-of-materials.pdf
 media/
   demo/  hardware/  results/
-REFERENCES.md      — cited literature, by DOI
+REFERENCES.md      cited literature, by DOI
 ```
 
-### Two things that will confuse you if unexplained
+### Two things worth explaining before you go looking
 
-**The `shimi` folder name.** It is named after team member Ibrahim El-Shimi, not after any component. It is the final firmware.
+**Why the folder is called `shimi`.** It is named after Ibrahim El-Shimi, one of the team, not after any part of the machine. That folder holds the final firmware.
 
-**The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board. That chapter was written early and never revised after the team migrated to the ESP32 for its extra I/O, speed and WiFi. **The firmware in this repository is the ground truth: the final controller is an ESP32.** Development was done in the Arduino IDE throughout, which is the likely source of the confusion.
+**The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board. That chapter was written early on and never revised after we moved to the ESP32 for the extra I/O, the speed and the WiFi. Trust the firmware in this repository: the final controller is an ESP32. We used the Arduino IDE throughout, which is probably where the confusion started.
 
-Note also that `firmware/arduino-avr/FINAL_PID_CODE_WITH_RTOS/` is named "FINAL" but includes `Arduino_FreeRTOS.h` and uses `analogWrite()` — both AVR-only. Despite the name, it is an earlier development milestone, not the final build.
+While you are at it, note that `firmware/arduino-avr/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading. It is an earlier milestone, not the final build.
 
-### Commit history
+### About the commit history
 
-The first commit preserves the 2021 files exactly as they were archived. The second re-enables the gait-phase tasks in `shimi.ino`, which had been commented out during a test session and left that way in the saved file. Both states are kept in history so the archive stays honest.
+The first commit holds the 2021 files exactly as they were archived. The second re-enables the gait-phase tasks in `shimi.ino`, which had been commented out during a test session and left that way when the file was saved. Keeping both states means the archive stays honest about what was found and what was changed.
 
 ---
 
-## Team
+## The team
 
-B.Sc. Mechatronics Engineering, AASTMT College of Engineering and Technology, Cairo — 2021
+B.Sc. Mechatronics Engineering, AASTMT College of Engineering and Technology, Cairo, 2021.
 
 - Ahmed Mohamed Ahmed Mokhtar
 - Amr Samir Hassanein Mohamed
 - Ibrahim Ayman Ibrahim El-Shimi
 - Mohamed Ahmed Mohamed Tawakol ([@Tawakoll](https://github.com/Tawakoll))
 
-**Supervisors:** Dr. Ahmed Elsawaf · Dr. Moustafa A. Fouz
+Supervised by Dr. Ahmed Elsawaf and Dr. Moustafa A. Fouz.
 
-**Sponsorship:** Academy of Scientific Research and Technology (ASRT), Egypt
+Sponsored by the Academy of Scientific Research and Technology (ASRT), Egypt.
 
 ---
 
-## License
+## Licence
 
-- **Code** (`firmware/`) — [MIT](LICENSE)
-- **Documents and media** (`docs/`, `media/`) — [CC BY-NC 4.0](LICENSE-DOCS)
+The code under `firmware/` is [MIT](LICENSE). The documents and media under `docs/` and `media/` are [CC BY-NC 4.0](LICENSE-DOCS).
 
-Third-party papers referenced during the project are **not** redistributed here; see [REFERENCES.md](REFERENCES.md) for DOIs.
+Papers we read during the project are not redistributed here. [REFERENCES.md](REFERENCES.md) lists them with DOIs.
