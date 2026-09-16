@@ -2,7 +2,16 @@
 
 **A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
 
-<img src="media/hardware/cad-assembly-annotated.png" width="38%">
+<table>
+<tr>
+<td width="50%"><img src="media/hardware/cad-assembly-annotated.png" width="100%"></td>
+<td width="50%"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
+</tr>
+<tr>
+<td align="center"><i>As designed</i></td>
+<td align="center"><i>As built</i></td>
+</tr>
+</table>
 
 | | | | |
 |---|---|---|---|
@@ -102,6 +111,21 @@ Motor and ball screw figures, from the graduation book:
 The screw was sized against an approximate 1500 N design load and checked for buckling as a fixed-supported column over a 130 mm span. That calculation and the Inventor FEA (Von Mises stress, displacement, contact pressure) are worked through in the graduation book.
 
 The drill motor is the root of most of the limitations further down this page.
+
+<img src="media/hardware/cad-rotation.gif" width="32%">
+
+Opened up, the drivetrain and the foot look like this:
+
+<table>
+<tr>
+<td width="50%"><img src="media/hardware/annotated-actuation.png" width="100%"></td>
+<td width="50%"><img src="media/hardware/annotated-foot-exploded.png" width="100%"></td>
+</tr>
+<tr>
+<td align="center"><i>Motor, gearbox, ball screw and nut</i></td>
+<td align="center"><i>Foot, exploded</i></td>
+</tr>
+</table>
 
 ### Sensing
 
