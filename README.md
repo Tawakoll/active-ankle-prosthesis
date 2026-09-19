@@ -4,9 +4,9 @@
 
 <table>
 <tr>
-<td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" height="300"></td>
-<td width="33%" align="center"><img src="media/hardware/ankle-assembled.png" height="300"></td>
-<td width="33%" align="center"><img src="media/hardware/ankle-electronics-bay.png" height="300"></td>
+<td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" width="100%"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-electronics-bay.png" width="100%"></td>
 </tr>
 <tr>
 <td align="center"><i>As designed</i></td>
@@ -55,9 +55,14 @@ flowchart LR
     JOINT --> FOOT[Foot]:::drive
     FOOT --> GND[Ground]:::drive
 
-    ENC["Magnetic encoder<br/>(AS5600)"]:::fb -->|position feedback| SUM
-    SG["Strain gauge sensors<br/>(load cells)"]:::fb -->|weight feedback| SM
+    JOINT -.->|senses shaft position| ENC["Magnetic encoder<br/>(AS5600)"]:::fb
+    ENC -->|position feedback| SUM
+
+    GND -.->|reaction force,<br/>up through the foot| SG["Strain gauge sensors<br/>(load cells)"]:::fb
+    SG -->|weight feedback| SM
 ```
+
+The dotted lines are what actually generates each feedback signal, not just where it plugs back in: the encoder reads the joint the motor is turning, and the strain gauges read the ground pushing back up through the foot. Nothing here reads back through a current sensor — see the note on that below.
 
 Reading it as a cycle:
 
@@ -112,6 +117,8 @@ Per the team's presentation, one full gait cycle averages 0.98–1 s: roughly 0.
 
 One number here is worth a caveat: the presentation cites the ESP32 running at **160 MHz, "10x faster than an Arduino Uno"** (16 MHz × 10 = 160). The chip's commonly published maximum is **240 MHz** (about 15x the Uno) — 160 MHz is a real, selectable clock speed on this hardware, just not its ceiling, so "10x" understates it if the board was left at its default. Separately, the firmware's own PWM only uses 8-bit resolution (`LEDC_TIMER_13_BIT` is set to `8`, a leftover name from an earlier attempt) even though the chip can do more — the "16-bit" figure above is what the ESP32 is capable of, not what this project's motor PWM actually uses.
 
+**On the current sensor:** the ACS712 shows up nowhere in the diagram above because it is nowhere in any control loop. It is read in exactly two places in this repository, both standalone bench sketches for characterising the motor (`CURRENT_SENSOR`, `CURRENT_SENSOR_motor` under [`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench)) — neither the AVR bench's own final PID controller nor the ESP32 firmware ever reads it. It never fed a decision, on the bench or in the final build.
+
 </details>
 
 ---
@@ -128,7 +135,7 @@ The hardware it was recorded from is pictured at the top of this page. This is a
 
 ### A second recording that didn't survive
 
-The presentation's "Control results" slide shows a different plot: `Target`, `Actual` and `PIDOut` traced over several repeated step cycles, from a separate session on the same machine and the same day. That is the trajectory-tracking demonstration on its own, without the gait-phase gating shown above. Only a still frame of it survived into the exported presentation file — the underlying video is not embedded in the `.pptx`, and it is not anywhere else on this machine either. We searched the entire project folder, Downloads, Videos, and OneDrive for it and came up empty.
+The presentation's "Control results" slide shows a different plot: `Target`, `Actual` and `PIDOut` traced over several repeated step cycles, from a separate session on the same machine and the same day. That is the trajectory-tracking demonstration on its own, without the gait-phase gating shown above. Only a still frame of that recording survives.
 
 <img src="media/results/pid-tracking-target-actual.png" width="55%">
 
