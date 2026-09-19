@@ -4,9 +4,9 @@
 
 <table>
 <tr>
-<td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" width="92%"></td>
-<td width="33%" align="center"><img src="media/hardware/ankle-assembled.png" width="100%"></td>
-<td width="33%" align="center"><img src="media/hardware/ankle-electronics-bay.png" width="100%"></td>
+<td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" height="300"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-assembled.png" height="300"></td>
+<td width="33%" align="center"><img src="media/hardware/ankle-electronics-bay.png" height="300"></td>
 </tr>
 <tr>
 <td align="center"><i>As designed</i></td>
@@ -15,7 +15,7 @@
 </tr>
 </table>
 
-Inside the frame: **1** 18 V drill battery · **2** regulator and driver boards · **3** HX711 load cell amplifiers · **4** ball screw nut · **5** shin housing, ball screw inside · **6** foot plate, load cells underneath
+Inside the frame: **1** 18 V drill battery · **2** battery power connector · **3** small regulator board off the battery leads (exact chip not identified from the photo) · **4** RS-550S motor · **5** HX711 load-cell amplifiers · **6** ball screw nut · **7** shin housing, ball screw inside · **8** foot plate, load cells underneath, AS5600 encoder wiring at the joint
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -37,44 +37,102 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 ## How it works
 
-The ankle is a closed position loop with an outer layer that decides *what position to ask for*.
+Control is split into two layers, the way the team's own presentation laid it out: a high-level **state machine** decides which part of the gait cycle the wearer is in, and a low-level **PID loop** drives the motor to reach the angle that phase calls for.
 
 ```mermaid
 flowchart LR
-    TOE["2x load cell<br/>(toe)"] --> HXA[HX711]
-    HEEL["2x load cell<br/>(heel)"] --> HXB[HX711]
-    HXA --> GP{"gait phase<br/>toe / heel contact"}
-    HXB --> GP
-    GP --> TG["TrajGen<br/>picks trajectory segment"]
-    TG -->|"setpoint"| PID["PID loop"]
-    PID -->|"PWM + direction"| DRV["Cytron MD10C"]
-    DRV --> MOT["RS-550S motor"]
-    MOT --> SCREW["SFU1605 ball screw"]
-    SCREW --> JOINT["ankle joint"]
-    JOINT --> ENC["AS5600 encoder"]
-    ENC -->|"measured position"| PID
+    classDef hi fill:#dbeafe,stroke:#1f6feb,stroke-width:2px,color:#0b3d91
+    classDef lo fill:#dcfce7,stroke:#15803d,stroke-width:2px,color:#14532d
+    classDef drive fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#78350f
+    classDef fb fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#1f2937
+
+    SM["State machine<br/>(high-level controller)"]:::hi --> WT["Walking trajectory<br/>(TrajGen)"]:::hi
+    WT -->|setpoint| SUM((" + / − ")):::lo
+    SUM --> PID["PID controller<br/>(low-level controller)"]:::lo
+    PID -->|desired angle response| DRV["H-bridge driver<br/>(Cytron MD10C)"]:::drive
+    DRV --> MOT["DC motor<br/>(RS-550S)"]:::drive
+    MOT --> JOINT[Ankle joint]:::drive
+    JOINT --> FOOT[Foot]:::drive
+    FOOT --> GND[Ground]:::drive
+
+    ENC["Magnetic encoder<br/>(AS5600)"]:::fb -->|position feedback| SUM
+    SG["Strain gauge sensors<br/>(load cells)"]:::fb -->|weight feedback| SM
 ```
 
 Reading it as a cycle:
 
-1. **Where is the wearer in their step?** Four load cells under the foot report toe and heel contact. The combination identifies the gait phase.
-2. **What angle should the ankle be at?** `TrajGen` plays the segment of the reference trajectory that belongs to that phase, one sample at a time. Each sample is the setpoint.
-3. **Get there.** The PID loop compares the setpoint against the encoder and drives the motor through the H-bridge. The ball screw turns rotation into the linear travel that moves the joint.
-4. **Measure and repeat.** The encoder closes the loop.
+1. **Where is the wearer in their step?** The strain gauges under the foot report weight distribution as heel and toe contact. That feeds the state machine, which is entirely what decides the gait phase, not a timer.
+2. **What angle should the ankle be at?** The trajectory generator plays the segment of the reference walking trajectory that belongs to that phase, one sample at a time. Each sample is the setpoint.
+3. **Get there.** The PID controller compares the setpoint against the measured position and drives the motor through the H-bridge. The output is the desired angle response, turned into PWM and a direction.
+4. **Measure and repeat.** The magnetic encoder closes the position loop; the strain gauges keep telling the state machine where the next phase begins.
 
-Every one of those steps is its own FreeRTOS task, so sensing, planning and control run concurrently rather than in one polling loop.
+Every one of those steps runs as its own FreeRTOS task, so sensing, planning and control run concurrently rather than in one polling loop.
+
+This diagram carries the same boxes, arrows and labels as the team's original control-strategy diagram (from the final presentation, slides 32 and 36) — recoloured for legibility and with one typo fixed (**"STRAIN GAUGES SESNORS"** → **SENSORS**). No wording or logic was changed. It checks out exactly against the firmware: `toe_cells`/`heel_cells` set `heel_state`/`toe_state`, `TrajGen` is the state machine picking a trajectory segment from those two booleans, and `pid_control.cpp` is the summing junction and PID block driving the Cytron driver.
+
+### The gait cycle it targets
+
+```mermaid
+flowchart TD
+    classDef top fill:#93c5fd,stroke:#1f6feb,stroke-width:2px,color:#0b3d91
+    classDef stance fill:#bbf7d0,stroke:#15803d,stroke-width:2px,color:#14532d
+    classDef swing fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#78350f
+
+    GC[Gait cycle]:::top --> SP[Stance phase]:::stance
+    SP --> HS[Heel strike]:::stance --> FF[Foot flat]:::stance --> MS[Midstance]:::stance --> HO[Heel off]:::stance --> TO[Toe off]:::stance
+    TO --> SW[Swing phase]:::swing
+    SW --> IS[Initial swing]:::swing --> MDS[Mid swing]:::swing --> TS[Terminal swing]:::swing
+```
+
+Per the team's presentation, one full gait cycle averages 0.98–1 s: roughly 0.59–0.67 s of stance and 0.38–0.42 s of swing (about a 60/40 split, in line with published gait figures). Our own hardware takes about 5 seconds to play through the same trajectory — see [Limitations](#what-worked-and-what-didnt) for why.
+
+<details>
+<summary><b>Sensing, feedback and why an ESP32</b></summary>
+
+**Where the sensors actually are**, from the team's own photos rather than a schematic:
+
+<table>
+<tr>
+<td width="50%"><img src="media/hardware/strain-gauge-placement.png" width="100%"></td>
+<td width="50%"><img src="media/hardware/encoder-at-joint.png" width="100%"></td>
+</tr>
+<tr>
+<td align="center"><i>Strain gauge sensors 1–2 at the toe, 3–4 at the heel</i></td>
+<td align="center"><i>AS5600 magnetic encoder, mounted at the joint</i></td>
+</tr>
+</table>
+
+**Why ESP32 over the first Uno board**, from the presentation's own reasoning:
+
+- Sufficient I/O: 2 GPIO per load cell × 4 load cells = 8 pins, 1 PWM + 1 digital for the motor driver, 2 I²C pins for the AS5600 — 12 pins in total
+- WiFi and Bluetooth on-board
+- 32-bit core vs. the Uno's 8-bit ATmega328
+- 12-bit ADC vs. the Uno's 10-bit
+- Up to 16-bit hardware PWM vs. the Uno's 8-bit `analogWrite`
+
+One number here is worth a caveat: the presentation cites the ESP32 running at **160 MHz, "10x faster than an Arduino Uno"** (16 MHz × 10 = 160). The chip's commonly published maximum is **240 MHz** (about 15x the Uno) — 160 MHz is a real, selectable clock speed on this hardware, just not its ceiling, so "10x" understates it if the board was left at its default. Separately, the firmware's own PWM only uses 8-bit resolution (`LEDC_TIMER_13_BIT` is set to `8`, a leftover name from an earlier attempt) even though the chip can do more — the "16-bit" figure above is what the ESP32 is capable of, not what this project's motor PWM actually uses.
+
+</details>
 
 ---
 
 ## The ankle tracking a gait cycle
 
-This is a recording of the live telemetry, not of the ankle itself. The traces are joint position together with `heel_state` and `toe_state`, so it shows the controller working through a full cycle with contact detection running.
+This is a recording of the live telemetry, not of the ankle itself. The traces are joint position together with `heel_state` and `toe_state`, so it shows the controller working through a full cycle with contact detection running — the full system, state machine and PID loop together.
 
 <img src="media/demo/gait-cycle-trace.gif" width="50%">
 
 The original screen capture is at [`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm). GitHub will not play it inline from a repository path, so it downloads rather than streams, which is why the GIF is here instead.
 
-The hardware it was recorded from is pictured at the top of this page.
+The hardware it was recorded from is pictured at the top of this page. This is also the same recording behind the "Results of state machine" slide in the team's final presentation — same COM port, same timestamp, same window, matched frame for frame.
+
+### A second recording that didn't survive
+
+The presentation's "Control results" slide shows a different plot: `Target`, `Actual` and `PIDOut` traced over several repeated step cycles, from a separate session on the same machine and the same day. That is the trajectory-tracking demonstration on its own, without the gait-phase gating shown above. Only a still frame of it survived into the exported presentation file — the underlying video is not embedded in the `.pptx`, and it is not anywhere else on this machine either. We searched the entire project folder, Downloads, Videos, and OneDrive for it and came up empty.
+
+<img src="media/results/pid-tracking-target-actual.png" width="55%">
+
+If that original recording turns up somewhere, it belongs here as a second GIF alongside the one above.
 
 ---
 
@@ -272,6 +330,10 @@ raw = raw - ZeroClaib;                 // measured offset of the assembled joint
 To read the array in degrees, multiply by 360/4096, about 0.0879 degrees per count. The range of roughly -74 to +156 counts is therefore about -6.5 to +13.7 degrees at the encoder, which the ball screw and foot linkage map onto the anatomical ankle range.
 
 Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) and ran the loop on that. The line is still there in the ESP32 source, commented out. If you compare the two builds, that is the difference to watch for: the same trajectory array means counts in one and degrees in the other.
+
+This is the same trajectory plotted in degrees, from the team's own presentation — peak of about +14° and a trough of about −7°, which is exactly the −6.5° to +13.7° range worked out above:
+
+<img src="media/results/ankle-angle-vs-gait-cycle.png" width="45%">
 
 ---
 
