@@ -15,6 +15,8 @@
 </tr>
 </table>
 
+## Project Description
+
 - Graduation project, B.Sc. Mechatronics Engineering, AASTMT, Cairo — sponsored by the **Academy of Scientific Research and Technology (ASRT)**, graded **Excellent (A+)**
 - Real-time control, running as concurrent **FreeRTOS** tasks: trajectory generation, encoder read, PID loop, load-cell sampling and telemetry all run in parallel, not in one polling loop
 - Controlled by an **ESP32-WROOM-32**, written in **C/C++** through the **Arduino IDE**
@@ -23,10 +25,6 @@
 - Built entirely from off-the-shelf parts sourced locally in Cairo, including a motor salvaged from a cordless drill
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
-
-A DC motor turns a ball screw, which drives the ankle joint. Load cells in the foot tell the controller which part of the gait cycle the wearer is in, and the ankle follows a reference angle trajectory to match.
-
-The project won a sponsorship scholarship from the **Academy of Scientific Research and Technology (ASRT)**, Egypt.
 
 ---
 
@@ -91,119 +89,28 @@ One number here is worth a caveat: the presentation cites the ESP32 running at *
 
 ---
 
-## The ankle tracking a gait cycle
+## The working full system
 
-The reference trajectory the controller is tracking, plotted in degrees over one gait cycle — peak of about +14°, trough of about −7°:
+Physical hardware and the live PID trace, at the same time: a hand moving the ankle joint through the ball screw, the load-cell board lit up beneath it, and the setpoint/measured-position plot updating on the laptop in real time.
 
-<img src="media/results/ankle-angle-vs-gait-cycle.png" width="45%">
+<img src="media/demo/full-system-pid.gif" width="45%">
 
-This is a recording of the live telemetry, not of the ankle itself. The traces are joint position together with `heel_state` and `toe_state`, so it shows the controller working through a full cycle with contact detection running — the full system, state machine and PID loop together.
-
-<img src="media/demo/gait-cycle-trace.gif" width="50%">
-
-The original screen capture is at [`media/demo/gait-cycle-demo.webm`](media/demo/gait-cycle-demo.webm). GitHub will not play it inline from a repository path, so it downloads rather than streams, which is why the GIF is here instead.
-
-The hardware it was recorded from is pictured at the top of this page. This is also the same recording behind the "Results of state machine" slide in the team's final presentation — same COM port, same timestamp, same window, matched frame for frame.
-
-### A second recording that didn't survive
-
-The presentation's "Control results" slide shows a different plot: `Target`, `Actual` and `PIDOut` traced over several repeated step cycles, from a separate session on the same machine and the same day. That is the trajectory-tracking demonstration on its own, without the gait-phase gating shown above. Only a still frame of that recording survives.
-
-<img src="media/results/pid-tracking-target-actual.png" width="55%">
-
-If that original recording turns up somewhere, it belongs here as a second GIF alongside the one above.
+The source clip is at [`media/demo/full-system-pid.mp4`](media/demo/full-system-pid.mp4).
 
 ---
 
 ## Components
 
-### Actuation
-
-| Part | Role |
+| Part | Use |
 |---|---|
-| RS-550S brushed DC motor | Drives the joint. Taken from a cordless drill: we could not source a brushless motor with the torque-to-size ratio we wanted within the budget. |
-| Cytron MD10C H-bridge | Motor driver, 10 A continuous, driven by a PWM pin and a direction pin. |
+| RS-550S brushed DC motor | Drives the joint. Salvaged from a cordless drill. |
+| Cytron MD10C H-bridge | Motor driver. |
 | SFU1605 ball screw and nut | Converts motor rotation into the linear travel that moves the joint. |
 | SKF 6002 bearing | Carries the ankle joint. |
-| 18 V Li-ion pack, 1200 mAh | Supplies the motor, and the logic rail through a step-down regulator. |
-
-Motor and ball screw figures, from the graduation book:
-
-| Property | Value |
-|---|---|
-| Motor nominal voltage | 18 V DC (operating range 3-24 V) |
-| Motor no-load speed | 22,000 rpm |
-| Motor no-load current | 0.9 A |
-| Motor stall current | 62 A |
-| Motor peak efficiency | 8 A, 103 W output |
-| Screw diameter | 16 mm (13 mm root) |
-| Screw lead | 5 mm per revolution |
-| Screw length | 400 mm |
-| Screw material | Steel alloy, 147 MPa permissible strength |
-
-The screw was sized against an approximate 1500 N design load and checked for buckling as a fixed-supported column over a 130 mm span. That calculation and the Inventor FEA (Von Mises stress, displacement, contact pressure) are worked through in the graduation book.
-
-The drill motor is the root of most of the limitations further down this page.
-
-<img src="media/hardware/cad-assembly-annotated.png" width="34%">
-
-| | | | |
-|---|---|---|---|
-| **1** Motor | **4** Ball screw nut | **7** Bearing | **10** Heel |
-| **2** Motor holder | **5** Lower link | **8** Foot shaft | **11** Spring sheet |
-| **3** Support | **6** Lower link shaft | **9** Fore foot | |
-
-Opened up, the drivetrain and the foot look like this:
-
-<table>
-<tr>
-<td width="50%"><img src="media/hardware/annotated-actuation.png" width="100%"></td>
-<td width="50%"><img src="media/hardware/annotated-foot-exploded.png" width="100%"></td>
-</tr>
-<tr>
-<td align="center"><i>Motor, gearbox, ball screw and nut</i></td>
-<td align="center"><i>Foot, exploded</i></td>
-</tr>
-</table>
-
-The same assembly with the side panel off:
-
-<img src="media/hardware/ankle-electronics-bay-annotated.png" width="34%">
-
-**1** 18 V drill battery · **2** battery power connector · **3** small regulator board off the battery leads (exact chip not identified from the photo) · **4** RS-550S motor · **5** HX711 load-cell amplifiers · **6** ball screw nut · **7** shin housing, ball screw inside · **8** foot plate, load cells underneath, AS5600 encoder wiring at the joint
-
-### Sensing
-
-| Part | Role |
-|---|---|
-| AS5600 magnetic rotary encoder (I²C, 12-bit) | Joint position. Absolute within one turn; firmware counts revolutions for multi-turn travel. |
-| 50 kg full-bridge load cells | Ground contact. Four of them: two under the toe, two under the heel. |
-| HX711 24-bit ADC | One amplifier per load cell, so four. |
-| ACS712 current sensor, 30 A | Motor current. Used in the first design and on the test bench; it is not in the final ESP32 wiring or firmware. |
-
-Toe and heel contact read together identify the gait phase, whether that is heel strike, flat foot, toe off or swing. That is what tells the controller where the wearer is in the cycle, rather than assuming it from a timer.
-
-### Control electronics
-
-| Part | Role |
-|---|---|
-| ESP32-WROOM-32 | The controller on the assembled ankle. Chosen over the first board for the extra I/O the four load cells needed, the clock speed, and onboard WiFi. |
-| ATmega328 board | Ran the motor test bench while the ankle was being machined: motor, H-bridge, encoder and PID tuning. |
-| Step-down regulator | Logic rail off the 18 V pack: 3.3 V for the ESP32, 5 V in the first design. |
-
-### Wiring
-
-The first design was built around an Uno board (ATmega328); we moved to an ESP32 partway through, for the extra I/O, the speed and the WiFi. Both diagrams survive, which makes the migration easy to see:
-
-**First design, Uno board:**
-
-<img src="media/hardware/wiring-diagram-uno.png" width="50%">
-
-**Final design, ESP32:**
-
-<img src="media/hardware/wiring-diagram-esp32.png" width="50%">
-
-The ESP32 build drops the ACS712 from the loop and swaps the 5 V regulator for a 3.3 V one. Everything else carries over.
+| 18 V Li-ion pack | Powers the motor and, through a step-down regulator, the logic. |
+| ESP32-WROOM-32 | Main controller. |
+| AS5600 magnetic encoder | Joint position feedback. |
+| 4× 50 kg load cells + HX711 amplifiers | Toe/heel contact, for gait-phase detection. |
 
 ---
 
@@ -262,7 +169,9 @@ To read the array in degrees, multiply by 360/4096, about 0.0879 degrees per cou
 
 Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) and ran the loop on that. The line is still there in the ESP32 source, commented out. If you compare the two builds, that is the difference to watch for: the same trajectory array means counts in one and degrees in the other.
 
-The plot near the top of this page, from the team's own presentation, is this same trajectory in degrees — matching the −6.5° to +13.7° range worked out above.
+This is that same trajectory plotted in degrees, from the team's own presentation — peak of about +14°, trough of about −7°, matching the −6.5° to +13.7° range worked out above:
+
+<img src="media/results/ankle-angle-vs-gait-cycle.png" width="45%">
 
 ---
 
@@ -282,64 +191,3 @@ Setting this out plainly, since an archive that oversells itself is no use to an
 - **Motor authority is capped at 125 of 255 PWM**, about 49 percent duty. We set that ceiling deliberately to keep the improvised drivetrain from tearing itself apart. There is also a hard travel stop: outside -80 to +170 counts the motor is cut regardless of what the loop asks for.
 - **There is no torque or impedance control.** The ankle tracks position and nothing else. A real prosthesis needs compliance that changes through the gait cycle; ours is stiff the whole way through.
 - **It was never tested on an amputee.** All of our testing happened on the bench.
-
----
-
-## What is in this repository
-
-```
-firmware/
-  ankle_controller_esp32/   the final controller, ported to plain C++ sources
-  original-sketches/        the 2021 .ino sketches exactly as they were written
-    ankle_controller_esp32/   the final ESP32 build, the one that ran
-    loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
-docs/
-  graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
-  individual-contribution-mohamed-tawakol.docx  individual section
-  project-proposal-2020.pdf
-  bill-of-materials.pdf
-media/
-  demo/  hardware/  results/
-REFERENCES.md      cited literature, by DOI
-```
-
-### One thing worth explaining before you go looking
-
-**The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the same IDE for both boards, which is probably where the confusion started.
-
-While you are at it, note that `FINAL_PID_CODE_WITH_RTOS` (in the [dc-motor-pid-tuning-bench](https://github.com/Tawakoll/dc-motor-pid-tuning-bench) repo) has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading: it is the final *bench* controller, the last milestone before the ESP32 build, not the final firmware.
-
-### About the commit history
-
-The first commit holds the 2021 files exactly as they were archived. Two later commits change behaviour: one re-enables the load cell tasks in `setup()`, and the port commit restores the gait-phase state machine inside `TrajGen`. Both had been commented out in the saved file, leaving a build where the load cells ran without affecting motion.
-
-Keeping the archived state as the first commit means the history shows what was found as well as what was changed. The WiFi credentials are the one exception: they were redacted throughout, including in history.
-
----
-
-## The team
-
-B.Sc. Mechatronics Engineering, AASTMT College of Engineering and Technology, Cairo, 2021.
-
-- **Mohamed Ahmed Mohamed Tawakol** ([@Tawakoll](https://github.com/Tawakoll))
-- Ahmed Mohamed Ahmed Mokhtar
-- Amr Samir Hassanein Mohamed
-- Ibrahim Ayman Ibrahim El-Shimi
-
-Supervised by Dr. Ahmed Elsawaf and Dr. Moustafa A. Fouz.
-
-### Contributions
-
-Everything in this repository that is software, control or electronics is the work of **Mohamed Tawakol**: the firmware and its FreeRTOS task design, the PID loop and its tuning, the motor test bench, sensor integration and the circuit design.
-
-The project as a whole was a four-person effort. The mechanical design, manufacturing and the written thesis were shared across the team, and the graduation book carries all four names.
-
-Sponsored by the Academy of Scientific Research and Technology (ASRT), Egypt.
-
----
-
-## Licence
-
-The code under `firmware/` is [MIT](LICENSE). The documents and media under `docs/` and `media/` are [CC BY-NC 4.0](LICENSE-DOCS).
-
-Papers we read during the project are not redistributed here. [REFERENCES.md](REFERENCES.md) lists them with DOIs.
