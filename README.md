@@ -59,22 +59,6 @@ Every one of those steps runs as its own FreeRTOS task, so sensing, planning and
 
 This is the team's original control-strategy diagram, from the final presentation (slides 32 and 36), with one spelling fix (**"STRAIN GAUGES SESNORS"** → **SENSORS**) and nothing else touched. It checks out exactly against the firmware: `toe_cells`/`heel_cells` set `heel_state`/`toe_state`, `TrajGen` is the state machine picking a trajectory segment from those two booleans, and `pid_control.cpp` is the summing junction and PID block driving the Cytron driver.
 
-### The gait cycle it targets
-
-```mermaid
-flowchart TD
-    classDef top fill:#93c5fd,stroke:#1f6feb,stroke-width:2px,color:#0b3d91
-    classDef stance fill:#bbf7d0,stroke:#15803d,stroke-width:2px,color:#14532d
-    classDef swing fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#78350f
-
-    GC[Gait cycle]:::top --> SP[Stance phase]:::stance
-    SP --> HS[Heel strike]:::stance --> FF[Foot flat]:::stance --> MS[Midstance]:::stance --> HO[Heel off]:::stance --> TO[Toe off]:::stance
-    TO --> SW[Swing phase]:::swing
-    SW --> IS[Initial swing]:::swing --> MDS[Mid swing]:::swing --> TS[Terminal swing]:::swing
-```
-
-Per the team's presentation, one full gait cycle averages 0.98–1 s: roughly 0.59–0.67 s of stance and 0.38–0.42 s of swing (about a 60/40 split, in line with published gait figures). Our own hardware takes about 5 seconds to play through the same trajectory — see [Limitations](#what-worked-and-what-didnt) for why.
-
 <details>
 <summary><b>Sensing, feedback and why an ESP32</b></summary>
 
