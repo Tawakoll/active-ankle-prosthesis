@@ -3,7 +3,7 @@
 **A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
 
 
-## The working full system
+## Live Demo of the prosthesis
 
 Physical hardware and the live PID trace, at the same time: a hand moving the ankle joint through the ball screw, the load-cell board lit up beneath it, and the setpoint/measured-position plot updating on the laptop in real time.
 
