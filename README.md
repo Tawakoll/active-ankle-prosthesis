@@ -15,7 +15,12 @@
 </tr>
 </table>
 
-Inside the frame: **1** 18 V drill battery · **2** battery power connector · **3** small regulator board off the battery leads (exact chip not identified from the photo) · **4** RS-550S motor · **5** HX711 load-cell amplifiers · **6** ball screw nut · **7** shin housing, ball screw inside · **8** foot plate, load cells underneath, AS5600 encoder wiring at the joint
+- Graduation project, B.Sc. Mechatronics Engineering, AASTMT, Cairo — sponsored by the **Academy of Scientific Research and Technology (ASRT)**, graded **Excellent (A+)**
+- Real-time control, running as concurrent **FreeRTOS** tasks: trajectory generation, encoder read, PID loop, load-cell sampling and telemetry all run in parallel, not in one polling loop
+- Controlled by an **ESP32-WROOM-32**, written in **C/C++** through the **Arduino IDE**
+- Closed-loop **PID position control**, driving a DC motor through an H-bridge and ball screw to a reference angle trajectory
+- Gait-phase sensing from four **load cells** (two heel, two toe) via **HX711** amplifiers, plus an **AS5600** magnetic encoder for joint position
+- Built entirely from off-the-shelf parts sourced locally in Cairo, including a motor salvaged from a cordless drill
 
 > **Archived academic project, 2021.** This was our B.Sc. graduation project in Mechatronics Engineering at the Arab Academy for Science, Technology & Maritime Transport (AASTMT), Cairo. It is kept here as a record of the work. Nobody maintains it, and it is not a medical device.
 
@@ -117,13 +122,17 @@ Per the team's presentation, one full gait cycle averages 0.98–1 s: roughly 0.
 
 One number here is worth a caveat: the presentation cites the ESP32 running at **160 MHz, "10x faster than an Arduino Uno"** (16 MHz × 10 = 160). The chip's commonly published maximum is **240 MHz** (about 15x the Uno) — 160 MHz is a real, selectable clock speed on this hardware, just not its ceiling, so "10x" understates it if the board was left at its default. Separately, the firmware's own PWM only uses 8-bit resolution (`LEDC_TIMER_13_BIT` is set to `8`, a leftover name from an earlier attempt) even though the chip can do more — the "16-bit" figure above is what the ESP32 is capable of, not what this project's motor PWM actually uses.
 
-**On the current sensor:** the ACS712 shows up nowhere in the diagram above because it is nowhere in any control loop. It is read in exactly two places in this repository, both standalone bench sketches for characterising the motor (`CURRENT_SENSOR`, `CURRENT_SENSOR_motor` under [`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench)) — neither the AVR bench's own final PID controller nor the ESP32 firmware ever reads it. It never fed a decision, on the bench or in the final build.
+**On the current sensor:** the ACS712 shows up nowhere in the diagram above because it is nowhere in any control loop. It is read in exactly two places, both standalone bench sketches for characterising the motor (`CURRENT_SENSOR`, `CURRENT_SENSOR_motor`, in the [dc-motor-pid-tuning-bench](https://github.com/Tawakoll/dc-motor-pid-tuning-bench) repo) — neither the AVR bench's own final PID controller nor the ESP32 firmware ever reads it. It never fed a decision, on the bench or in the final build.
 
 </details>
 
 ---
 
 ## The ankle tracking a gait cycle
+
+The reference trajectory the controller is tracking, plotted in degrees over one gait cycle — peak of about +14°, trough of about −7°:
+
+<img src="media/results/ankle-angle-vs-gait-cycle.png" width="45%">
 
 This is a recording of the live telemetry, not of the ankle itself. The traces are joint position together with `heel_state` and `toe_state`, so it shows the controller working through a full cycle with contact detection running — the full system, state machine and PID loop together.
 
@@ -193,6 +202,12 @@ Opened up, the drivetrain and the foot look like this:
 <td align="center"><i>Foot, exploded</i></td>
 </tr>
 </table>
+
+The same assembly with the side panel off:
+
+<img src="media/hardware/ankle-electronics-bay.png" width="34%">
+
+**1** 18 V drill battery · **2** battery power connector · **3** small regulator board off the battery leads (exact chip not identified from the photo) · **4** RS-550S motor · **5** HX711 load-cell amplifiers · **6** ball screw nut · **7** shin housing, ball screw inside · **8** foot plate, load cells underneath, AS5600 encoder wiring at the joint
 
 ### Sensing
 
@@ -265,63 +280,9 @@ We built it in the **Arduino IDE**, chosen because it is free, open source and g
 
 ### The test bench came first
 
-None of the control work waited for the mechanical build. While the ankle was still being machined, we put a bench together with just the motor, the H-bridge and the encoder, and developed against that.
+None of the control work waited for the mechanical build. While the ankle was still being machined, we put a bench together with just the motor, the H-bridge and the encoder, and developed the PID position loop against that — tuned by hand over the serial link until the gains held a square-wave setpoint cleanly. By the time the assembled ankle existed, the loop was already tuned and the gains were known; the move to the ESP32 and the load cell array came after that, on a controller we already trusted.
 
-<img src="media/hardware/motor-test-bench.png" width="50%">
-
-**1** RS-550S motor · **2** ball screw and coupling · **3** Cytron MD10C driver · **4** ATmega328 board · **5** 18 V drill battery
-
-[`firmware/original-sketches/motor-test-bench/`](firmware/original-sketches/motor-test-bench) is that work, and the sketches read as the sequence we actually went through.
-
-<details>
-<summary><b>The bring-up sequence, sketch by sketch</b></summary>
-
-| Stage | Sketches |
-|---|---|
-| Encoder alone, magnet detection and angle read | `encoder_angle` |
-| Encoder driving the motor through the H-bridge | `read_angle_with_motor` |
-| Current sensing, standalone then under load | `CURRENT_SENSOR`, `CURRENT_SENSOR_motor` |
-| Load cell characterisation | `Read_1x_load_cell_renewed` |
-| Moving to an RTOS, one concern per task | `FreeRTOS_sketch`, `testing_encoder_with_rtos`, `target_angle_and_printing` |
-| PID under the scheduler | `rtos_with_pid`, `rtos_with_pid_library` |
-| Position control, then position plus current | `pid_position_control_code`, `pid_position_control_current_code` |
-| Full bench controller with the gait trajectory | `FINAL_PID_CODE_WITH_RTOS` |
-
-</details>
-
-By the time the assembled ankle existed, the loop was already tuned and the gains were known. The move to the ESP32 and the load cell array came after that, on a controller we already trusted.
-
-### Tuning it
-
-We tuned by hand over the serial link. The setpoint was a square wave between 0 and 150 counts, and we changed one gain at a time and watched the response. Green is the setpoint, blue the measured position, red the PID output.
-
-<img src="media/results/pid-tuning-kp-0.2-vs-0.3.png" width="50%">
-
-<details>
-<summary><b>The rest of the sweep</b></summary>
-
-**Kp = 0.1.** The response settles below the setpoint and never closes the gap:
-
-<img src="media/results/pid-tuning-kp-0.1.png" width="50%">
-
-**Kp = 0.1 against 0.2:**
-
-<img src="media/results/pid-tuning-kp-0.1-vs-0.2.png" width="50%">
-
-Raising Kp closes the steady-state gap and brings overshoot with it. The integral term, settling at Ki = 0.2, is what removed the remaining offset.
-
-</details>
-
-<details>
-<summary><b>Current sensing on the bench</b></summary>
-
-ACS712 output during bring-up, reading roughly 73.94 mA at rest against a 2503 mV reference, with a step to 147.88 mA under load:
-
-<img src="media/results/current-sensor-readings.png" width="50%">
-
-This was used to characterise the motor and choose the duty ceiling. It did not make it into the final ESP32 build.
-
-</details>
+That bench work — the bring-up sketches, the tuning sweep, the current-sensing characterisation — now has its own repository: [**dc-motor-pid-tuning-bench**](https://github.com/Tawakoll/dc-motor-pid-tuning-bench).
 
 ### About the trajectory units
 
@@ -338,9 +299,7 @@ To read the array in degrees, multiply by 360/4096, about 0.0879 degrees per cou
 
 Our earlier AVR build did convert to degrees in firmware (`ang = raw * 0.087`) and ran the loop on that. The line is still there in the ESP32 source, commented out. If you compare the two builds, that is the difference to watch for: the same trajectory array means counts in one and degrees in the other.
 
-This is the same trajectory plotted in degrees, from the team's own presentation — peak of about +14° and a trough of about −7°, which is exactly the −6.5° to +13.7° range worked out above:
-
-<img src="media/results/ankle-angle-vs-gait-cycle.png" width="45%">
+The plot near the top of this page, from the team's own presentation, is this same trajectory in degrees — matching the −6.5° to +13.7° range worked out above.
 
 ---
 
@@ -371,7 +330,6 @@ firmware/
   original-sketches/        the 2021 .ino sketches exactly as they were written
     ankle_controller_esp32/   the final ESP32 build, the one that ran
     loadcell_bench_esp32/     load-cell isolation test: sensors on, motor loop off
-    motor-test-bench/         AVR bench: motor, H-bridge, encoder, PID tuning
 docs/
   graduation-book-2021-07-03.pdf                full group thesis, 111 pp.
   individual-contribution-mohamed-tawakol.docx  individual section
@@ -386,7 +344,7 @@ REFERENCES.md      cited literature, by DOI
 
 **The book says Arduino Uno; the code says ESP32.** The electrical chapter of the graduation book describes an "Arduino Uno ATmega328" as the main board, and the bill of materials lists one. That chapter was written before we moved to the ESP32 and never revised afterwards. Trust the firmware and the second wiring diagram: the final controller is an ESP32. We used the same IDE for both boards, which is probably where the confusion started.
 
-While you are at it, note that `firmware/original-sketches/motor-test-bench/FINAL_PID_CODE_WITH_RTOS/` has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading: it is the final *bench* controller, the last milestone before the ESP32 build, not the final firmware.
+While you are at it, note that `FINAL_PID_CODE_WITH_RTOS` (in the [dc-motor-pid-tuning-bench](https://github.com/Tawakoll/dc-motor-pid-tuning-bench) repo) has "FINAL" in its name but includes `Arduino_FreeRTOS.h` and calls `analogWrite()`, both of which are AVR-only. The name is misleading: it is the final *bench* controller, the last milestone before the ESP32 build, not the final firmware.
 
 ### About the commit history
 
