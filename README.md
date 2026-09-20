@@ -44,30 +44,9 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 Control is split into two layers, the way the team's own presentation laid it out: a high-level **state machine** decides which part of the gait cycle the wearer is in, and a low-level **PID loop** drives the motor to reach the angle that phase calls for.
 
-```mermaid
-flowchart LR
-    classDef hi fill:#dbeafe,stroke:#1f6feb,stroke-width:2px,color:#0b3d91
-    classDef lo fill:#dcfce7,stroke:#15803d,stroke-width:2px,color:#14532d
-    classDef drive fill:#fde68a,stroke:#b45309,stroke-width:2px,color:#78350f
-    classDef fb fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#1f2937
+<img src="media/hardware/control-strategy-diagram.png" width="90%">
 
-    SM["State machine<br/>(high-level controller)"]:::hi --> WT["Walking trajectory<br/>(TrajGen)"]:::hi
-    WT -->|setpoint| SUM((" + / − ")):::lo
-    SUM --> PID["PID controller<br/>(low-level controller)"]:::lo
-    PID -->|desired angle response| DRV["H-bridge driver<br/>(Cytron MD10C)"]:::drive
-    DRV --> MOT["DC motor<br/>(RS-550S)"]:::drive
-    MOT --> JOINT[Ankle joint]:::drive
-    JOINT --> FOOT[Foot]:::drive
-    FOOT --> GND[Ground]:::drive
-
-    JOINT -.->|senses shaft position| ENC["Magnetic encoder<br/>(AS5600)"]:::fb
-    ENC -->|position feedback| SUM
-
-    GND -.->|reaction force,<br/>up through the foot| SG["Strain gauge sensors<br/>(load cells)"]:::fb
-    SG -->|weight feedback| SM
-```
-
-The dotted lines are what actually generates each feedback signal, not just where it plugs back in: the encoder reads the joint the motor is turning, and the strain gauges read the ground pushing back up through the foot. Nothing here reads back through a current sensor — see the note on that below.
+The encoder's feedback line taps the position loop right after the joint — it reads the shaft the motor is turning. The strain gauges' feedback line taps in from the ground side — they read the reaction force coming back up through the foot, and that feeds the state machine rather than the PID loop. Nothing here reads back through a current sensor — see the note on that below.
 
 Reading it as a cycle:
 
@@ -78,7 +57,7 @@ Reading it as a cycle:
 
 Every one of those steps runs as its own FreeRTOS task, so sensing, planning and control run concurrently rather than in one polling loop.
 
-This diagram carries the same boxes, arrows and labels as the team's original control-strategy diagram (from the final presentation, slides 32 and 36) — recoloured for legibility and with one typo fixed (**"STRAIN GAUGES SESNORS"** → **SENSORS**). No wording or logic was changed. It checks out exactly against the firmware: `toe_cells`/`heel_cells` set `heel_state`/`toe_state`, `TrajGen` is the state machine picking a trajectory segment from those two booleans, and `pid_control.cpp` is the summing junction and PID block driving the Cytron driver.
+This is the team's original control-strategy diagram, from the final presentation (slides 32 and 36), with one spelling fix (**"STRAIN GAUGES SESNORS"** → **SENSORS**) and nothing else touched. It checks out exactly against the firmware: `toe_cells`/`heel_cells` set `heel_state`/`toe_state`, `TrajGen` is the state machine picking a trajectory segment from those two booleans, and `pid_control.cpp` is the summing junction and PID block driving the Cytron driver.
 
 ### The gait cycle it targets
 
@@ -205,7 +184,7 @@ Opened up, the drivetrain and the foot look like this:
 
 The same assembly with the side panel off:
 
-<img src="media/hardware/ankle-electronics-bay.png" width="34%">
+<img src="media/hardware/ankle-electronics-bay-annotated.png" width="34%">
 
 **1** 18 V drill battery · **2** battery power connector · **3** small regulator board off the battery leads (exact chip not identified from the photo) · **4** RS-550S motor · **5** HX711 load-cell amplifiers · **6** ball screw nut · **7** shin housing, ball screw inside · **8** foot plate, load cells underneath, AS5600 encoder wiring at the joint
 
