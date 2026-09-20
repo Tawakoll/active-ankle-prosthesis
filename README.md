@@ -1,7 +1,16 @@
 # Active Ankle Prosthesis
 
 **A powered ankle prosthesis built by four engineering students in Cairo, from parts bought off the shelf.**
+---
 
+## The working full system
+
+Physical hardware and the live PID trace, at the same time: a hand moving the ankle joint through the ball screw, the load-cell board lit up beneath it, and the setpoint/measured-position plot updating on the laptop in real time.
+
+<img src="media/demo/full-system-pid.gif" width="45%">
+
+The source clip is at [`media/demo/full-system-pid.mp4`](media/demo/full-system-pid.mp4).
+---
 <table>
 <tr>
 <td width="33%" align="center"><img src="media/hardware/cad-rotation.gif" width="100%"></td>
@@ -87,15 +96,6 @@ One number here is worth a caveat: the presentation cites the ESP32 running at *
 
 </details>
 
----
-
-## The working full system
-
-Physical hardware and the live PID trace, at the same time: a hand moving the ankle joint through the ball screw, the load-cell board lit up beneath it, and the setpoint/measured-position plot updating on the laptop in real time.
-
-<img src="media/demo/full-system-pid.gif" width="45%">
-
-The source clip is at [`media/demo/full-system-pid.mp4`](media/demo/full-system-pid.mp4).
 
 ---
 
