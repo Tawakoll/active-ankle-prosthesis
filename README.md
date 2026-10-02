@@ -49,7 +49,7 @@ So we asked a narrow question: could we build one locally, from parts available 
 
 ## How it works
 
-Control is split into two layers, the way the team's own presentation laid it out: a high-level **state machine** decides which part of the gait cycle the wearer is in, and a low-level **PID loop** drives the motor to reach the angle that phase calls for.
+Control is split into two layers. A high-level **state machine** decides which part of the gait cycle the wearer is in, and a low-level **PID loop** drives the motor to reach the angle that phase calls for.
 
 <img src="media/hardware/control-strategy-diagram.png" width="90%">
 
